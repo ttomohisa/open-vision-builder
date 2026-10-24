@@ -1,12 +1,20 @@
 # 現在の状態
 
-更新日: 2026-10-24 JST。
+更新日: 2026-10-25 JST。
 
 ## 段階
 
 **P1a の分類はマージ済み。P1b は検出の最終ヘッド学習・完全 ONNX の基礎検証まで進行。検出の中間特徴量一致は FAIL、P1 全体と初期版は未完了です。**
 
-合意・検証方針は [PR #1](https://github.com/ttomohisa/open-vision-builder/pull/1) と [PR #2](https://github.com/ttomohisa/open-vision-builder/pull/2) で記録しました。[分類の PR #3](https://github.com/ttomohisa/open-vision-builder/pull/3) は 2026-10-24 04:50 UTC にマージされました。今回の比較元はその `037ef78e6e46c5191a11c7556c3127f2b28d6f15`、ブランチは `feat/dfine-training-foundation` です。以後のマージ状況は [PR 一覧](https://github.com/ttomohisa/open-vision-builder/pulls)を確認します。
+合意・検証方針は [PR #1](https://github.com/ttomohisa/open-vision-builder/pull/1) と [PR #2](https://github.com/ttomohisa/open-vision-builder/pull/2) で記録しました。[分類の PR #3](https://github.com/ttomohisa/open-vision-builder/pull/3) は 2026-10-24 04:50 UTC にマージされました。[検出基礎検証の PR #4](https://github.com/ttomohisa/open-vision-builder/pull/4) も 2026-10-24 09:47 UTC（18:47 JST）にマージ済みです。今回の比較元は `4549114d40491f16bba75da5742f7c3d3b4e1e77`、ブランチは `docs/dfine-investigation-checkpoint` です。以後のマージ状況は [PR 一覧](https://github.com/ttomohisa/open-vision-builder/pulls)を確認します。
+
+## PR #4 後の作業と復元範囲
+
+追加6入力で元実装と各 runtime 自身の特徴を使う学習を比較した際、候補契約は全件不合格でした。矩形入力では最終出力も不一致、ブラウザでは近い score の query 順序の入替を観測しました。学習の損失・勾配・更新値に部分一致の記録がありますが、検出器の合格にはしていません。
+
+**追加の未 push コード・生レポート・ローカルコミットは、作業環境の自動整理で失われました。GitHub 上の PR #4 までの履歴は維持されています。** 現在の追加成果物は、会話の実行記録から復元した[調査メモ](verification/2026-10-24-dfine-prefix-investigation.md)と[再開方針](decisions/0004-dfine-investigation-checkpoint.md)です。追加の検証コードや、当時記録したテスト成功を、このブランチで実行・保存済みのものとして数えません。
+
+今回の変更は文書のみです。下表は GitHub に残る PR #4 までの実装・検証範囲で、追加調査の再現は未完了です。
 
 ## 実装・検証の状態
 
@@ -44,7 +52,7 @@
 
 ## 次の作業
 
-1. **P1b の G1: 中間特徴の不一致を解決する。** FP32 の演算順・誤差伝播を元実装と調べる。許容差を再検討する場合も、今回の失敗を保存し、数値上の根拠と新しい未使用入力による事前定義の評価手順を先に記録する。観測した最大値に閾値を合わせない。
+1. **矩形1画像の最小再現を復元し、専用ブランチへ保存する。** PR #4 の固定ソースと重みから source / ORT の出力差を再現し、encoder の差が生じ始める箇所を絞る。元の G1 を変更せず、検出 UI はまだ接続しない。追加6入力は既知の回帰入力として扱う。数値条件の見直しが必要なら根拠と未使用入力の評価手順を別に事前記録し、観測した最大値に閾値を合わせない。
 2. 限定した最終段から完全な training forward・補助/分布損失・matching・独自クラスへ拡張する。encoder と全 decoder のクラス依存部分を扱い、位置推定を無作為に初期化し直さない。現在の2 step を過適合・実用精度の証拠にしない。
 3. 分類・検出をそれぞれ実データの未使用評価分割と、同条件の PyTorch 学習で比較する。分類バックボーンの追加学習、Medium / Small の品質候補を評価する。
 4. WebGPU と対象 PC の時間・ピークメモリ、中断・checkpoint 再開を検証し、P1 全体の採否を判断する。
