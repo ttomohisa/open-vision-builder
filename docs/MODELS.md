@@ -1,16 +1,124 @@
-# Candidate models and licenses
+# モデル候補と採用基準
 
-**Status: candidates, not validated or approved release artifacts.**
+レビュー日: **2026-10-24 JST**
 
-| Task | Quality candidate | Lightweight/first-spike candidate |
+本書は ONNX を初期要件とする画像分類・物体検出のモデル選定方針を定める。
+現時点は設計文書を整備する段階であり、アプリ実装、モデル変換、学習、性能測定は実施していない。
+以下は候補であり、配布するリビジョン・重み・ONNX 成果物の採用承認ではない。
+
+関連文書: [製品要件](PRODUCT.md) / [構成](ARCHITECTURE.md) / [検証計画](VERIFICATION.md) / [進捗](STATUS.md)
+
+## 1. 初期候補
+
+| タスク / プロファイル | 正確なモデル ID と重みの出典 | 用途 |
 | --- | --- | --- |
-| Classification | [timm MobileNetV4 Conv Medium](https://huggingface.co/timm/mobilenetv4_conv_medium.e500_r256_in1k) | [timm MobileNetV4 Conv Small](https://huggingface.co/timm/mobilenetv4_conv_small.e2400_r224_in1k) |
-| Detection | [D-FINE Small COCO](https://huggingface.co/ustc-community/dfine-small-coco) | [D-FINE Nano COCO](https://huggingface.co/ustc-community/dfine-nano-coco) |
+| 分類 / 標準 | [`timm/mobilenetv4_conv_medium.e500_r256_in1k`](https://huggingface.co/timm/mobilenetv4_conv_medium.e500_r256_in1k) | 分類精度を優先する初期候補 |
+| 分類 / 軽量 | [`timm/mobilenetv4_conv_small.e2400_r224_in1k`](https://huggingface.co/timm/mobilenetv4_conv_small.e2400_r224_in1k) | メモリー・待ち時間を抑える候補 |
+| 検出 / 標準 | [`ustc-community/dfine-small-coco`](https://huggingface.co/ustc-community/dfine-small-coco) | 学習済み検出器の精度を優先する候補 |
+| 検出 / 軽量・最初の技術検証 | [`ustc-community/dfine-nano-coco`](https://huggingface.co/ustc-community/dfine-nano-coco) | 完全な検出器を小さい構成で検証する候補 |
 
-Prefer a **complete pretrained detector** with trained localization/decoder weights over a classifier backbone plus newly initialized detector head. Do not substitute Objects365-derived checkpoints without separately verifying their commercial terms.
+分類候補は Google の MobileNetV4 アーキテクチャに対し、Ross Wightman が timm で学習した ImageNet-1k 重みである。
+Google 配布の重みと同一であるとは扱わない。モデル ID の `conv` を含む構成まで固定する。
 
-Each release candidate requires: immutable source revision, checkpoint filename and SHA-256, exact weight and source-code licenses, training-data provenance, NOTICE/attribution obligations, reproducible conversion, inference parity, backward-gradient/weight-update evidence, fine-tuning quality and memory/runtime measurements.
+検出候補は COCO で学習した D-FINE の完全な検出器を起点とする。
+複数物体のクラス・位置を予測するモデルであり、画像切り出しの分類を検出として扱わない。
+独自クラスへの適応では分類出力の変更が必要になり得るが、学習済みの特徴抽出・位置推定を活用する。
 
-The model cards display Apache-2.0, but that alone does not finish release-level provenance and license review. Verify exact downloadable artifacts and dependencies before shipping. Never silently auto-update weights.
+### 公開値と未測定値
 
-Upstream benchmark scores are not browser benchmarks or guarantees of downstream accuracy.
+| 候補 | 公開パラメーター数 | 上流が報告する評価値 |
+| --- | --- | --- |
+| MobileNetV4 Conv Medium | 9.72M | ImageNet-1k top-1: 79.928%（256）、80.858%（320） |
+| MobileNetV4 Conv Small | 3.77M | ImageNet-1k top-1: 73.756%（224）、74.616%（256） |
+| D-FINE Small | 約 10M | COCO val2017 box AP: 48.5 |
+| D-FINE Nano | 約 4M | COCO val2017 box AP: 42.8 |
+
+分類値の出典は上記モデルカードの比較表。括弧内は評価入力サイズであり、製品設定の確定値ではない。
+検出値の出典は [D-FINE 公式モデル表](https://github.com/Peterande/D-FINE) の COCO-only 行。
+AP は IoU 0.50–0.95 の平均であり、分類 top-1 と比較する指標ではない。
+これらは上流の評価結果であり、本プロジェクトによる再現結果ではない。
+ブラウザーでの精度・推論時間・学習時間・ピークメモリー、およびユーザーデータでの品質はすべて未測定。
+パラメーター数は ONNX 配布サイズや学習時メモリー量を意味しない。
+
+## 2. ライセンスと商用再配布
+
+上記 4 モデルのカードには、モデル単位で **Apache-2.0** が表示されている。
+これは商用利用・再配布を検討する根拠であり、正確な配布成果物の権利確認が完了したことを意味しない。
+コードのライセンスだけから、外部ダウンロードの重みまで同じ条件と推定しない。
+
+| 対象 | 確認する一次資料 | 採用時に残すもの |
+| --- | --- | --- |
+| MobileNetV4 の実装 | [timm リポジトリー](https://github.com/huggingface/pytorch-image-models) の Apache-2.0 表記と LICENSE | 採用コミット、LICENSE、関連 NOTICE |
+| D-FINE の実装 | [D-FINE リポジトリー](https://github.com/Peterande/D-FINE) の Apache-2.0 表記と LICENSE | 採用コミット、LICENSE、関連 NOTICE |
+| 正確な重みファイル | 各モデルカード、ファイル一覧、配布条件 | 配布元、固定リビジョン、ファイル名、SHA-256、ライセンス根拠 |
+| 変換・学習・実行依存物 | 実際に使う各プロジェクトの配布条件 | バージョン、ライセンス、成果物への同梱要件 |
+
+静的サイトから配る重み・ONNX・学習用成果物も再配布対象として確認する。
+[Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) の LICENSE、必要な著作権表示・帰属表示・NOTICE を保持し、変更したファイルで変更を明示する。
+採用・変換・リリース担当が表示と同梱を確認する。公開前に未確認項目を残したまま採用済みにしない。
+上流の表示と下流の表示が食い違う場合は、解消するまで採用を保留する。
+
+### データセット由来の条件
+
+D-FINE 公式 README は Objects365 由来の `*_obj365` / `*_obj2coco` 重みについて、
+D-FINE のライセンスだけで商用利用可能と見なさないよう明記している。
+初期候補は上記 COCO-only 重みに限定し、精度表の高い別チェックポイントへ無断で置き換えない。
+COCO-only という名称自体を権利保証とせず、選択したファイルの学習来歴・配布条件を確認する。
+ユーザーの学習画像・注釈の利用権は、事前学習モデルのライセンスとは別に扱う。
+
+## 3. 出典と変換の連続性
+
+D-FINE の公式実装はネイティブチェックポイントからの ONNX 書き出し手順を提供する。
+一方、上記 D-FINE の Hugging Face 重みは Transformers 向けの変換済み成果物である。
+両者を同じファイル・同じ変換経路と扱わず、実際に採用した経路を記録する。
+
+1. 元の重みの配布元・リビジョン・ハッシュ・ライセンス根拠を確定する。
+2. ネイティブ `.pth` と Hugging Face 重みを対応付ける場合、対応関係と数値的一致を確認する。
+3. アーキテクチャ定義、キー対応、重み変換、前後処理の変更を再現可能な手順として保存する。
+4. ONNX と学習用成果物を、元の重みと変換ツールのバージョンまで追跡可能にする。
+5. 微調整・再書き出しした成果物にも、元モデルの出典・表示義務・変更履歴を引き継ぐ。
+
+Hugging Face の重みを選んだ後に、便宜上別の `.pth` を使う変更もモデル変更として再確認する。
+変換済みモデルが推論できることは、ブラウザーでそのパラメーターを学習できる証拠ではない。
+
+## 4. モデルレジストリーの必須項目
+
+以下は将来のレジストリーに要求する項目であり、実装済みスキーマではない。
+未確定の値は未確認として保持し、リビジョンやハッシュを推測で埋めない。
+
+| 項目 | 記録内容 |
+| --- | --- |
+| `id`, `task`, `profile`, `status` | 正確な候補 ID、分類/検出、標準/軽量、採用段階 |
+| `source` | 配布元 URL、固定リビジョン、ファイル名、SHA-256、取得日 |
+| `code` | 実装元 URL、コミット、アーキテクチャ、必要な依存バージョン |
+| `license` | コードと重みそれぞれの条件、根拠文書、商用再配布確認、LICENSE/NOTICE |
+| `lineage` | 元チェックポイント、データセット来歴、変換元と変換先の対応 |
+| `io` | 入力形状、色順、正規化、リサイズ/余白、出力形式、ラベル順序、後処理 |
+| `artifacts` | ONNX opset、各成果物のハッシュ・サイズ、変換手順とツールのバージョン |
+| `training` | 学習対象パラメーター、凍結範囲、損失、必要な学習成果物と生成方法 |
+| `compatibility` | 実際に検証したブラウザー・実行プロバイダー・演算・制約 |
+| `evidence` | 上流の指標と本プロジェクトの測定を分けた結果、検証日、採否理由 |
+
+## 5. 採用ゲート
+
+詳細な手順・合格条件は [VERIFICATION.md](VERIFICATION.md) に置く。
+以下の各ゲートは、現時点ではすべて未完了である。
+
+| ゲート | 採用前に必要な証拠 |
+| --- | --- |
+| 出典・権利 | 正確なコードと重みの固定、商用利用・再配布条件、表示義務、変換来歴の確認 |
+| 推論 | 選択した元モデルと ONNX の出力一致、前後処理、対象ブラウザーでの演算対応 |
+| 学習 | 採用する学習範囲で勾配と更新が成立し、小規模データへの過学習試験が通ること |
+| 検出の学習 | マッチング・分類損失・位置損失等を含む実際の検出学習経路の成立 |
+| 再書き出し | 更新した重みを ONNX に反映し、再読込後の推論が更新後モデルと一致すること |
+| 製品適合 | 実機での品質・待ち時間・ピークメモリー・中断復帰を評価し、対象範囲を明示すること |
+
+上流の Python 学習手順や ONNX 推論エクスポーターは、ブラウザー内学習の成立を保証しない。
+特に検出では完全な学習経路の検証が必要であり、ONNX 読み込み成功だけで実現可能と判断しない。
+実際の採用状態と残課題は [STATUS.md](STATUS.md) に記録する。
+
+## 6. 候補の変更
+
+モデルや重みを「最新版」に自動追従させず、変更時はライセンス・変換・品質・実行条件を再確認する。
+比較候補を追加する場合も、同じレジストリー項目と採用ゲートを適用する。
+初期候補の制約を解消するための変更は、[製品要件](PRODUCT.md) と [構成](ARCHITECTURE.md) に反映する。
