@@ -58,9 +58,15 @@
 
 P1a は分類の固定バックボーン + ヘッド更新です。P1b の部分成功は既存80クラスの最終 pretrained bbox/class ヘッドに限り、前段・LQE は固定です。中間特徴の G1 FAIL、独自クラス、全体 fine-tuning・実用精度・WebGPU・メモリ・保存再開は [STATUS](docs/STATUS.md) の残課題を引き継ぎます。検出の調査用モデルは `public/` / `dist/` に入れず、製品画面へ接続しません。モデルバイナリ・ユーザーデータ・生成 fixture の大きな tensor を git に含めません。
 
+追加の `scripts/reproduce_detector_rectangle.py` は、既知の矩形1画像の CPU 診断です。終了0は測定完了であり、sourceParityPassed / 各出力の不一致と qualifiesDetector=false を保持します。新しい実行結果は [2026-10-25 の記録](docs/verification/2026-10-25-rectangle-reproduction.md)を参照し、失われた追加調査全体が復元済みとは扱いません。
+
+同じ診断は [decoder の各段と同一入力 replay](docs/verification/2026-10-25-decoder-localization.md)も記録します。`references` は固定 anchor、各 layer の `reference_points` は更新後の消費座標です。局所 replay の成功で元の G1 を合格に変更しません。
+
 ## PR とマージ
 
 - 作業ごとに専用ブランチを用い、`main` へ直接変更を push しない。
+- 長い調査・実装はレビュー可能な小さな単位に分け、節目で専用ブランチへ保存する。未完成なら draft PR と未検証事項を残し、作業停止前に GitHub で保存済みの SHA を確認する。ローカル commit だけを永続保存と扱わない。
+- PR #4 後の未 push 作業は自動整理で失われた。[復元メモ](docs/verification/2026-10-24-dfine-prefix-investigation.md)の過去の観測値を、現在のコード・生ログ・テスト成功の代用にしない。未保存の検証コードは再構築と再実行が必要。
 - レビュー可能な単位で PR を作る。マージと自動マージの設定はユーザーが行う。
 - PR には変更理由、実装した動作、確認した内容、未検証事項、必要なら動作確認 URL を記載する。
 - 他の PR が未マージの場合は、依存関係と比較元を明記する。無関係な変更を含めない。

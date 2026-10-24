@@ -23,6 +23,8 @@ A browser-based vision model builder for image classification and object detecti
 
 [分類の実測](docs/verification/2026-10-24-browser-classification.md)・[検出の部分結果と未解決ゲート](docs/verification/2026-10-24-dfine-foundation.md)・[現在の状態](docs/STATUS.md)に、確認した範囲と残課題を記録しています。
 
+PR #4 後の追加調査では、一部入力で検出の最終出力にも不一致を観測しました。未 push の調査コードと生ログは作業環境の自動整理で失われたため、[調査メモ](docs/verification/2026-10-24-dfine-prefix-investigation.md)は会話記録からの復元であり、現時点の再現可能な合格証拠には使いません。その後、[矩形1画像の診断コードと新しい測定結果](docs/verification/2026-10-25-rectangle-reproduction.md)を保存しました。今回も中間特徴は不一致で、検出の採用は保留しています。
+
 ## ローカルで試す
 
 開発用には Node.js 24、Python 3.12 と公開重みを準備する環境を使います。**Python は開発者による公開モデルの準備と検証に使うものです。配信済みのアプリを使うユーザーには不要です。**

@@ -21,6 +21,8 @@ P1a では MobileNetV4 Conv Small の固定特徴 + 分類ヘッドの学習、�
 
 **P1b は基礎検証を進行中**です。GridSample を修正・独立検証し、事前学習済み D-FINE Nano の最終 bbox / class ヘッド更新、完全 ONNX、独立 browser / Python 推論を確認しました。一方、前段の中間特徴量の一致ゲートは FAIL です。[部分結果](verification/2026-10-24-dfine-foundation.md) と [ADR 0003](decisions/0003-dfine-foundation.md) に従い、この未解決条件、独自クラス、完全な学習レシピ、精度評価を次の PR で進めます。元の失敗や許容差を置き換えて P1 全体を完了にはしません。
 
+2026-10-25 の再開時点では PR #4 はマージ済みです。その後の未 push 調査コードと生ログが自動整理で失われたため、[追加調査の復元メモ](verification/2026-10-24-dfine-prefix-investigation.md)と [ADR 0004](decisions/0004-dfine-investigation-checkpoint.md)を先に保存します。続けて[矩形1画像の診断コードと新しい測定結果](verification/2026-10-25-rectangle-reproduction.md)を同じ PR #5 に保存しました。最終出力は今回は許容差内、中間特徴は不一致という結果です。次は保存した小さい再現を起点に decoder の差を絞ります。失われた大きな検証基盤の全面再構築を、その前提にはしません。
+
 最初は MobileNetV4 Conv Small と D-FINE Nano を使って経路を検証し、品質を重視した Medium / Small の候補へ進めます。候補の変更はモデル名だけで判断せず、[MODELS](MODELS.md) の条件と [VERIFICATION](VERIFICATION.md) の結果に基づけます。
 
 1. 公開重み・コード・参照データの版と利用条件を固定する。
