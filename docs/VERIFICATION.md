@@ -1,18 +1,152 @@
-# Technical verification gates
+# 検証計画とリリース判定
 
-**All gates: NOT RUN.** Never mark a model supported based solely on inference success.
+更新日: 2026-10-24 JST
 
-| Gate | Required evidence |
-| --- | --- |
-| G0 | Pin exact source, weight hashes, dependencies, license and provenance |
-| G1 | Reference PyTorch vs browser forward outputs and preprocessing agree within tolerances defined before running |
-| G2 | Gradients reach intended pretrained weights; optimizer changes them and frozen weights stay fixed |
-| G3 | Detection updates **pretrained localization** weights; matching/losses work and boxes improve on small training fixtures |
-| G4 | Held-out custom-class data evaluation; compare against equivalent Python training recipe |
-| G5 | Class-count changes, empty images, multiple objects, small boxes, aspect ratios and invalid labels |
-| G6 | Browser-generated complete ONNX passes independent ONNX Runtime Web and Python CPU inference parity |
-| G7 | No hidden dependence on training tensors, browser cache, remote model download or operator conversion API |
-| G8 | Measure actual browser/GPU, time, peak memory, cancellation, checkpoint and resume |
-| G9 | Verify no user images, labels, gradients or weights are transmitted to the operator |
+状態: **全ゲート NOT RUN（未実施）**。本書は検証計画であり、学習・精度・速度・ONNX 互換性の実証ではない。
 
-Record fixture licenses, input hashes, environment, commands, numerical tolerances, outcomes and failures. No invented benchmark or unverified success. Inability to fine-tune a candidate requires documenting the blocker and evaluating alternatives, not silently dropping ONNX or true detection training.
+## 1. 対象と変更できない条件
+
+[AGENTS.md](../AGENTS.md) を作業規則とし、[PRODUCT.md](PRODUCT.md)、[ARCHITECTURE.md](ARCHITECTURE.md)、[MODELS.md](MODELS.md)、[STATUS.md](STATUS.md) と整合させる。
+モデル名・公開重み・ライセンス・採用状態は MODELS、進捗は STATUS を参照する。
+
+- 現代的な事前学習済み分類モデルと、位置推定まで事前学習済みの完全な検出器を対象とする。
+- 学習対象はブラウザー内のユーザーデータ。画像、ラベル、特徴量、勾配、学習済み重みを運営側へ送信しない。
+- 運営側のアカウントサービス・API・DB・学習サーバーを設けない。
+- ユーザーのローカル Python による学習・変換を必須にしない。
+- 公開ベースモデルのビルド時準備は許容する。ユーザーデータの学習・書き出しの代行には使わない。
+- 初回リリースから、バックボーンと必要な全重みを含む単独の完全な FP32 ONNX を書き出す。
+- 商用利用条件、実際の検出器ファインチューニング、上記のローカル処理条件を失敗時にも維持する。
+
+現在の第一検証候補は MobileNetV4 Conv と D-FINE の COCO 学習済みモデルであり、モデル名自体を変更できない要件とはしない。候補を変更する場合も、上記の条件と以下の検証を適用する。
+
+## 2. ゲート一覧
+
+| ID | 判定対象 | 状態 |
+| --- | --- | --- |
+| G0 | ソース・重み・商用利用条件・変換履歴の固定 | NOT RUN |
+| G1 | 元実装とブラウザーの forward 一致 | NOT RUN |
+| G2 | 学習パラメーターへの勾配と実更新 | NOT RUN |
+| G3 | 少量データへの過適合と事前学習済み位置推定の更新 | NOT RUN |
+| G4 | 独自タスクの未使用データ評価と公平な PyTorch 比較 | NOT RUN |
+| G5 | クラス数・空画像・画像形状の境界条件 | NOT RUN |
+| G6 | 学習後の完全 FP32 ONNX と独立した推論一致 | NOT RUN |
+| G7 | キャッシュ・非公開状態・隠れた通信への非依存 | NOT RUN |
+| G8 | 実機での時間・メモリー・中断・保存・再開 | NOT RUN |
+| G9 | データ非送信と再現可能な証拠の確認 | NOT RUN |
+
+全ゲートの証拠を揃えるまで「ブラウザーで学習可能」「ONNX 対応済み」「リリース可能」としない。
+
+## 3. 実行前に固定する評価仕様
+
+- ソース commit、チェックポイントの URL・ハッシュ、依存バージョン、モデルレシピ、変換処理を記録する。
+- ブラウザー、OS、GPU、ドライバー、バックエンド、入力形状、バッチ、乱数条件を記録する。
+- 前処理、座標系、クラス順、出力テンソル、後処理、評価指標を先に定義する。
+- logits・特徴・boxes・scores・損失・勾配ごとに、比較方法と数値許容差を実行前に決める。
+- ゼロ近傍・小さい box・離散的な選択結果は、同じ相対誤差だけで判定しない。
+- 精度、時間、メモリーの合格条件も実行前に決め、結果に合わせて緩めない。
+- 本書には未測定のベンチマーク値や根拠のない固定許容差を置かない。
+- 少量過適合用データと未使用評価データを分離し、重複・近似重複・分割漏れを点検する。
+
+## 4. G0–G1: 重みと forward の対応
+
+- 公開重みが分類器だけ／バックボーンだけではなく、予定した完全なモデルの重みか確認する。
+- 分類では分類出力、検出では特徴段・生の分類出力・位置推定出力を元実装と比較する。
+- 同じ画像と同じ前処理で、元の PyTorch 実装、準備したグラフ、ブラウザーを比較する。
+- クラス変更前にベースモデルの一致を確認し、変更後は同じ初期テンソルを両実装へ渡す。
+- テンソル名、形状、軸順、共有パラメーター、固定／学習対象の対応表を保存する。
+- Conv の重み配置、padding、resize、正規化、活性化、座標復元の差を確認する。
+- BatchNorm の固定・融合、共有重みの複製、定数畳み込みは変換履歴と対応表に含める。
+- 融合後の推論パラメーターを学習する場合は、元の train-mode 学習と異なるレシピとして扱う。
+- 未対応演算、独自ドメイン、外部重み参照を列挙し、黙った置換や欠落を認めない。
+
+## 5. G2–G3: 本当に検出器を学習できるか
+
+### 実行系の前提
+
+jax-js を最初の検証候補とする。TFJS でのモデル再構築は未選定の別経路であり、代替実証とはしない。
+ONNX の推論成功や入力画像に対する勾配は、事前学習済み重みの更新を証明しない。
+jax-js の ONNX ローダーは initializer を内部に保持するため、学習パラメーターを明示的な入力へ変換する設計を検証する。
+公開 ModelProto を変更するだけで、作成済みの実行関数の重みが更新されると仮定しない。
+
+### 学習グラフと損失
+
+- D-FINE の公開 deploy グラフを、そのまま元の training forward と同一視しない。
+- deploy で省略・変更される補助出力、denoising、反復 refinement、detach の位置を対応表にする。
+- 採用する分類・位置・分布の損失、補助損失、教師信号を列挙し、元レシピとの差を明記する。
+- Hungarian matching と IoU などの教師信号に必要な stop-gradient を明示する。
+- matching の離散選択や GPU→CPU 読み戻しを、微分可能な計算と分けて検証する。
+- GridSample の値側・座標側を含め、必要な演算の forward と backward を検証する。
+- raw output を返すだけで後段実行が省略されると考えず、不要な後処理ノードを明示的に除く。
+
+### 更新の証拠
+
+- 学習対象テンソルを明示し、初期値が予定した公開事前学習済み重みに由来することを確認する。
+- 分類では分類パラメーター、検出では事前学習済みの位置推定パラメーターへの勾配を確認する。
+- 代表パラメーターの勾配を元実装または数値微分と比較し、optimizer の更新値も比較する。
+- クラス射影だけでなく、bbox／位置分布を担う事前学習済み重みが実際に変化することを記録する。
+- 固定対象が変化しないことと、更新が次回 forward・保存・書き出しへ反映されることを確認する。
+- 少量の既知データで損失と予測 box の変化を確認する。入力勾配や分類正解だけでは合格にしない。
+- NaN、Inf、ゼロ勾配、勾配の切断、誤った optimizer 状態の扱いを調べる。
+
+## 6. G4–G5: 品質とデータ条件
+
+- COCO の再評価だけでなく、対象用途の独自クラスを含む実データで検出・分類を評価する。
+- 過適合用データを品質評価に流用せず、学習・調整に未使用の評価分割を使う。
+- PyTorch 比較は同じ公開初期重み、分割、前処理、学習範囲、損失、optimizer、step 数・乱数条件を揃える。
+- 主比較はブラウザー版と同じ学習レシピとし、元の公開レシピとの差を別に記録する。
+- 元レシピの参考結果、学習前、ブラウザー学習後を混同せず、クラス別の失敗例も確認する。
+- 分類指標、検出指標、未検出・誤検出を記録し、対象用途の事前合意条件で判定する。
+- 1 クラス、複数クラス、事前学習時より多いクラス数、ラベル順序変更を試す。
+- D-FINE の encoder／decoder の class projection、必要な埋め込み、shape 定数を確認する。
+- クラス数変更と無関係な localization 重みを再初期化していないことを確認する。
+- 空画像、複数物体、画像端、小物体、縦長・横長、異なる解像度を含める。
+- 不正 box、空データ、未知ラベルは明示した入力規則に従って扱う。
+- クラス追加・削除時に既存学習状態をどう継続／無効化するかを確認する。
+
+## 7. G6–G7: 完全な ONNX と独立推論
+
+- 学習済みの全推論ネットと全重みを単一の FP32 ONNX に格納し、部分ヘッドのみの出力を認めない。
+- 更新した initializer、dtype、shape、クラス数、共有重み、BN 融合の対応を照合する。
+- 学習用に追加したパラメーター入力を除き、推論時に要求する入力を明記する。
+- optimizer・損失・matching などの学習専用要素と、推論に必要な演算を取り違えない。
+- 生出力、前処理、後処理、座標復元、ラベル対応を deployment kit の仕様として固定する。
+- 対応する opset・演算ドメイン・入力サイズを記録し、動的 shape の未検証範囲を約束しない。
+- 保存直前のブラウザー出力と、別の新規 ORT Web セッションの出力を比較する。
+- 同じ書き出しモデルを Python CPU の ONNX Runtime でも読み、同じ公開 fixture で比較する。
+- 学習時の tensor、Worker、IndexedDB、OPFS、モデルキャッシュを引き継がずに推論する。
+- 配布した kit のみを新しい環境で使い、モデルの追加取得や隠れたネットワーク依存がないことを確認する。
+- Python は配布先での推論と開発時の公開 fixture 検証に用い、利用者の学習・変換要件にしない。
+- ONNX が読めることだけで、全 edge 機器・量子化・各 accelerator 対応済みとはしない。
+
+## 8. G8–G9: 実機、継続性、非送信
+
+- 対象実機で初期化、初回／継続 step、評価、保存、書き出しの時間とメモリーを測る。
+- GPU・CPU・タブ内メモリーと保存容量を区別し、device lost・OOM・未対応環境を確認する。
+- 学習中の操作応答、取消、途中保存、タブ再開、checkpoint からの再開を確認する。
+- checkpoint は必要な重み、optimizer、進捗、レシピ、乱数状態を保存する設計を検証する。
+- 継続実行と再開後の結果を事前の許容条件で比較し、取消や例外で既存成果物を壊さないことを確認する。
+- データ読込から書き出しまで通信を観測し、画像・ラベル・特徴・勾配・学習済み重みの送信がないことを確認する。
+- エラー報告・分析 SDK・ログも対象とし、ユーザーデータや保存パスの意図しない収集を調べる。
+- CI の元実装比較と Python 検証には、公開・利用許諾済みの固定 fixture のみを使う。
+- ユーザーの書き出しモデルやデータを CI／運営サーバーへアップロードする経路を作らない。
+
+## 9. 証拠と不合格時の判断
+
+各ゲートは実行条件、コマンド／手順、入力・出力ハッシュ、比較結果、ログ、判定理由を記録する。
+再現に必要な依存と公開 fixture を固定し、個人データを検証成果物へ混ぜない。
+未実施は NOT RUN、失敗は失敗として残し、部分成功で全体を合格にしない。
+失敗時は証拠、原因、選択肢、次の候補と再検証範囲を ADR に記録し、STATUS を更新する。
+候補変更はモデルと実行系の両面で提案するが、ONNX・商用条件・バックエンド不要・実際の検出器学習を黙って緩めない。
+サーバー学習への切替や分類ヘッドだけの学習を代替完了とせず、未達の制約を明示して設計を再判断する。
+
+## 10. 一次資料
+
+- [jax-js ONNX README](https://github.com/ekzhang/jax-js/blob/main/packages/onnx/README.md): 入力微分の例とローダーの位置付け。
+- [jax-js ONNX 実装](https://github.com/ekzhang/jax-js/blob/main/packages/onnx/src/index.ts): initializer、入力、実行グラフの扱い。
+- [jax-js ONNX 演算](https://github.com/ekzhang/jax-js/blob/main/packages/onnx/src/ops/convolution.ts): Conv と GridSample の実装範囲。
+- [D-FINE decoder](https://github.com/Peterande/D-FINE/blob/master/src/zoo/dfine/dfine_decoder.py): クラス射影、位置推定、detach、deploy 変換。
+- [D-FINE criterion](https://github.com/Peterande/D-FINE/blob/master/src/zoo/dfine/dfine_criterion.py): 損失と補助・教師信号。
+- [D-FINE matcher](https://github.com/Peterande/D-FINE/blob/master/src/zoo/dfine/matcher.py): no-grad の割当て。
+- [D-FINE ONNX export](https://github.com/Peterande/D-FINE/blob/master/tools/deployment/export_onnx.py): deploy モデルと公開 export の入力・出力。
+
+上記 URL の実装確認と本プロジェクトでの動作検証は別である。実行時には参照 commit を固定する。

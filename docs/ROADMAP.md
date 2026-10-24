@@ -1,12 +1,47 @@
-# Roadmap
+# 開発の順序
 
-| Phase | PR scope | Exit condition |
+更新日: 2026-10-24 JST。
+
+UI を広く作る前に、実際のブラウザ学習と ONNX 出力が成立することを確認します。各段階はレビュー可能な PR に分けます。検証の途中結果だけを提出する場合は、残っている条件を明記します。
+
+| 段階 | 成果物 | その段階で確認すること |
 | --- | --- | --- |
-| P0 | Product docs, agent rules, model candidates, verification gates | Requirements and unknowns recorded |
-| P1 | Feasibility spike: MobileNetV4 Conv Small and D-FINE Nano | Real browser weight updates, complete ONNX export, Python inference parity, measured memory/accuracy |
-| P2 | Project import, local storage, annotation UI and backups | Images, classes and bounding boxes survive export/import |
-| P3 | Training/evaluation workflows | Re-training and held-out evaluation with failure review |
-| P4 | Python/API/static inference deployment kits | Standalone artifacts work outside builder |
-| P5 | Browser compatibility, edge profiles, docs, release checks | All agreed gates evidenced |
+| P0: 合意の記録 | AGENTS、製品要件、構成、モデル候補、検証条件、進捗、設計判断、PR テンプレート | 確定事項と未検証事項が区別され、次の作業者が参照できる |
+| P1: 学習・ONNX の技術検証 | 最小のデータ読込・学習・評価・ONNX 出力画面、開発用の参照処理、検証結果 | 分類と事前学習済み検出器の実際の重み更新、出力の一致、Python 利用、対象 PC の資源量 |
+| P2: プロジェクトとアノテーション | 画像取込、クラス管理、分類ラベル、矩形編集、保存、バックアップと復元 | データを失わず、学習するデータと正解を確認できる |
+| P3: 学習・評価の製品化 | プリセット、進行状況、中断・再開、学習履歴、誤分類・誤検出の確認 | 未知の画像で評価し、修正と再学習を回せる |
+| P4: SDK・配布キットの拡充 | Python 実行例、API ひな型、静的推論サイト用キット、出典・ライセンス情報 | 生成物だけを別の環境へ移し、ユーザーのホスティングで使える |
+| P5: 初期版の確認 | 対応環境表、復旧手順、モデル・依存関係のライセンス、リリース説明 | 初期版の製品要件と全検証条件が証拠付きで確認できる |
 
-ONNX is **P1**, not deferred until deployment-kit work. Make the first runnable spike available through a verified GitHub Pages preview; PR preview workflow must be implemented explicitly, not assumed built-in.
+**ONNX は P1 から必須です。P4 まで後回しにしません。** P4 は利用開始・配布の体験を整える段階です。
+
+## 次の実装 PR: P1
+
+最初は MobileNetV4 Conv Small と D-FINE Nano を使って経路を検証し、品質を重視した Medium / Small の候補へ進めます。候補の変更はモデル名だけで判断せず、[MODELS](MODELS.md) の条件と [VERIFICATION](VERIFICATION.md) の結果に基づけます。
+
+1. 公開重み・コード・参照データの版と利用条件を固定する。
+2. 小さな検証アプリ、公開データを使う参照処理、検証結果を保存する形式を用意する。
+3. 元のモデルとブラウザの出力を比較する。
+4. 分類・位置推定の意図したパラメータが更新されることを確認する。
+5. 少量データでの学習実装の確認と、分離したデータでの精度評価を行う。
+6. ブラウザで ONNX を生成し、新しいセッションと Python の ONNX Runtime で読み直す。
+7. 対象 PC の学習時間・メモリ・中断と再開を測定する。
+8. 結果に基づきエンジン・モデル・初期対応環境を選び、設計判断と STATUS を更新する。
+
+この一覧は作業順序です。実装開始時には、選定した版と API に合わせてファイル・インターフェース・実行コマンドを含む具体的な計画を作ります。存在しないコマンドを実行可能な手順として記載しません。
+
+## 動作確認の用意
+
+- P1 では GitHub Pages で動かせる静的な検証アプリを用意する。
+- 検証するコミット、ブラウザ、GPU、入力データと条件が分かるようにする。
+- リポジトリのサブパスとアセット・Worker の URL を確認する。
+- PR ごとのプレビューは採用した公開方式を明記し、実際に公開された URL を PR に付ける。
+- 共有されたプレビューでユーザーの画像を自動収集する仕組みを入れない。
+
+## 進行ルール
+
+PR の作成は開発側、マージはユーザーが行います。依存する PR が未マージなら、依存関係と比較元を明記します。
+
+技術検証が不合格になった場合は、どの条件が成立しなかったか、原因、次の検証を記録します。検出の Fine-tuning を単なる推論デモへ置き換えたり、ONNX 出力を将来対応に変えたりして P1 完了にしません。
+
+進捗の正本は [STATUS](STATUS.md) と対象 PR、採用理由は [設計判断](decisions/README.md) です。

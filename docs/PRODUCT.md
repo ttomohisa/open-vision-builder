@@ -1,19 +1,83 @@
-# Product requirements
+# 製品要件
 
-**Concept:** An open, browser-based alternative for people who liked Custom Vision.
+記録日: 2026-10-24 JST。リポジトリ: [ttomohisa/open-vision-builder](https://github.com/ttomohisa/open-vision-builder)。
 
-## Confirmed requirements
-1. Static Cloudflare hosting; no operator API, DB, accounts or training infrastructure.
-2. Local browser annotation, training and evaluation using the user's hardware, without uploading their data.
-3. Image classification and bounding-box object detection, including custom classes.
-4. Transfer learning/fine-tuning from commercially usable pretrained weights. Detection must retain pretrained localization capability.
-5. **Complete ONNX export in the initial release**, produced in the browser after training, directly usable by Python/ONNX Runtime without conversion.
-6. Package labels, preprocessing/postprocessing specification, inference examples, license notices and self-hosting/deployment starter kits. Users deploy the model themselves.
-7. Local project save/restore and backups, with interruption/restart handling.
-8. Development through GitHub PRs reviewed and merged by the repository owner, with GitHub Pages previews for working application PRs.
-9. Separate product and repository from Browser Kitty.
+## コンセプト
 
-## Proposed initial scope
-Single-label classification; multi-box detection; image import, label/box editor, train/validation/test splits, training and evaluation, mistake review, re-training, project backup and model export.
+「Custom Vision が好きだった人向けの、もっとオープンな Vision Model Builder」。画像を用意したユーザーが、アノテーションから追加学習、評価、モデルの持ち出しまでを行えるようにします。
 
-No guarantee of every browser, smartphone, NPU or edge accelerator. Begin by evaluating desktop Chrome/Edge with WebGPU. No server-side fallback that silently violates the product constraints.
+製品名は **Open Vision Builder**。Browser Kitty とは独立したプロジェクトです。Custom Vision との公式な提携や互換性を示すものではありません。
+
+## 合意済みの必須要件
+
+| ID | 要件 | 完了を判断する観点 |
+| --- | --- | --- |
+| R1 | アプリを Cloudflare の静的ホスティングで配信する | 静的ファイルの配信だけで主要機能が使える |
+| R2 | 運営側の API・DB を用意しない | 運営側のアカウントサービス、データ保管 API・DB、学習・変換 API を設けない |
+| R3 | 学習はユーザーのブラウザと計算資源で行う | 画像・ラベル・勾配・学習後の重みを学習サーバーへ送信せず完了できる |
+| R4 | 画像分類と物体検出を扱う | それぞれ画像の取り込みからアノテーション、学習、評価、出力まで通る |
+| R5 | 転移学習・Fine-tuning を中心にする | 学習済みの能力を引き継ぎ、ユーザーのデータでモデルの重みを更新する |
+| R6 | 初期版から ONNX 出力を必須にする | ブラウザで更新した重みを含む完全な推論モデルを生成し、Python で追加変換せず使える |
+| R7 | 商用利用できるモデルを採用する | 正確なコード・重みの出典と利用条件を確認し、必要なライセンス表示を含める |
+| R8 | モデルの配布・利用開始を支援する | モデル、ラベル、入出力仕様、Python 実行例などを持ち出せる |
+| R9 | 生成モデルのホスティングはユーザーが行う | 運営側の推論 API やモデル保管サービスへの依存を作らない |
+| R10 | 開発は GitHub の PR を中心に進める | 開発側が PR を提出し、ユーザーがレビュー・マージする |
+| R11 | GitHub Pages で動作確認できるようにする | 技術検証アプリ以降、対象コミットが分かる動作確認手段を用意する |
+| R12 | 合意と進捗をリポジトリに記録して参照する | AGENTS.md を入口にし、変更した仕様と状態を同じ PR で更新する |
+
+## ユーザーの作業の流れ
+
+1. 分類または物体検出のプロジェクトを作る。
+2. 自分の画像を取り込み、クラスを定義する。
+3. 画像へのラベル付け、または物体の位置へのアノテーションを行う。
+4. 学習・調整用の検証・最終評価のデータを分け、対応する事前学習済みモデルを追加学習する。
+5. 未学習の画像で結果を確認し、誤分類・見落とし・誤検出を調べる。
+6. アノテーションやデータを改善し、必要に応じて追加学習する。
+7. モデルと実行用の情報を出力し、自分の Python・API・対応エッジ環境などで利用する。
+
+プロジェクトのバックアップと復元、学習の中断・再開を設計に含めます。ブラウザ内の保存だけを、永続的なバックアップとして扱いません。
+
+## 初期実装の方針
+
+次は合意した設計に基づく実装候補です。技術検証の証拠がそろうまで、対応済みの機能とは表記しません。
+
+- 分類は MobileNetV4 Conv、検出は D-FINE の COCO 学習済みモデルを第一候補にする。
+- 品質評価の基準候補は分類 Medium・検出 Small。軽量設定と最初の検証には分類 Small・検出 Nano を用いる。
+- 検出は位置推定まで事前学習済みの構成を引き継ぐ。分類用バックボーンと新規の位置推定ヘッドだけを組み合わせた構成を標準案にしない。
+- 学習エンジンは未決定。jax-js を最初に検証し、TensorFlow.js によるモデル別実装の経路も評価する。
+- 最初の学習対象はデスクトップの Chrome / Edge と WebGPU を想定する。実測して対応環境を確定する。
+- 初期の UI は単一ラベル分類と矩形の物体検出から作る提案。多ラベル分類などの追加範囲は別途記録する。
+- 推論用の基本出力は FP32 ONNX。エッジの対応機種・ランタイムは個別に検証する。
+
+正確な配布物と採用状況は [MODELS](MODELS.md)、検証の方法は [VERIFICATION](VERIFICATION.md) を参照してください。
+
+## 初期版で受け渡すもの
+
+- 学習後の重みと固定して使った重みを含む ONNX 推論モデル。
+- クラス名・クラス番号の対応。
+- 入力サイズ、正規化、リサイズ、座標系、出力の解釈などの仕様。
+- Python の ONNX Runtime で動かす実行例。
+- ユーザーが API サーバーや静的推論サイトを用意するためのひな型・配布キット。
+- ベースモデルの出典、採用した重みの識別情報、必要なライセンス表示。
+- 学習設定・評価結果。学習再開用の情報はプロジェクト保存形式で別に扱う。
+
+ファイル名やスキーマは実装時にバージョン付きで定義します。ONNX の完全性は、アプリや元のモデルのダウンロード先に依存せず推論できることで判断します。
+
+## 初期版の成立とは別に扱うこと
+
+- 運営側のモデルホスティング、クラウド学習、チーム共有 DB。
+- 任意の ONNX を読み込んで、どのモデルでも学習できる汎用エディタ。
+- すべてのブラウザ・スマートフォンで同じ学習性能を保証すること。
+- すべての NPU・アクセラレータで同じ ONNX をそのまま高速実行できること。
+- 自動的な INT8 量子化を前提にすること。
+- 上流モデルの公開ベンチマークを、ユーザーのデータでの達成精度として保証すること。
+
+## 未決定事項
+
+- 学習エンジン、正確なモデルの revision・ハッシュ、対応端末、数値誤差の許容条件。
+- 入力解像度、クラス数・画像数の上限、初期プリセット。
+- プロジェクト・出力 manifest のスキーマと移行方法。
+- アプリ本体のライセンス。
+- 実測に基づくリリース時期。
+
+通常の実装判断は根拠とともに文書化します。必須要件の変更は、理由と影響を [設計判断](decisions/README.md) と PR に明記し、ユーザーの承認後に適用します。

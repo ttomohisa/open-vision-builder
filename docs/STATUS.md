@@ -1,15 +1,48 @@
-# Status
+# 現在の状態
 
-2026-10-24 — P0 documentation initialization.
+更新日: 2026-10-24 JST。
 
-- App: NOT IMPLEMENTED
-- Model and training engine: CANDIDATES ONLY
-- Browser fine-tuning: NOT TESTED
-- Detection localization training: NOT TESTED
-- Complete browser ONNX export: NOT TESTED
-- Python parity, accuracy and memory: NOT TESTED
-- GitHub Pages preview: NOT CONFIGURED
-- Cloudflare production deployment: NOT CONFIGURED
-- App source license: UNDECIDED
+## 段階
 
-Next: P1 proof of browser fine-tuning and ONNX export for classification and detection. When implementation status changes, update this document in the corresponding PR and link the evidence.
+**P0: 合意内容を記録済み。アプリ実装と ML 技術検証は未着手です。**
+
+概要と最初の設計判断は [PR #1](https://github.com/ttomohisa/open-vision-builder/pull/1) でマージ済みです。詳しい検証手順・出典・参照導線の整備を含む、その後の作成・レビュー状況は [GitHub の PR 一覧](https://github.com/ttomohisa/open-vision-builder/pulls) を参照してください。文書を追加したことを、動作するアプリが完成したという意味に扱いません。
+
+## 記録したこと
+
+- 静的ホスティング、運営側 API・DB なし、ユーザーのブラウザでの学習。
+- 分類と物体検出、初期版からの完全な ONNX 出力。
+- モデルの商用利用条件と、生成モデルをユーザーがホスティングする方針。
+- MobileNetV4 Conv と D-FINE COCO 版を第一候補とする理由。
+- エンジン選定を実際の学習・出力の検証結果で行う方針。
+- PR を作成してユーザーがマージする進め方。
+- 作業開始時の参照順序、仕様と進捗を更新するルール。
+
+## 実装・検証の状態
+
+| 項目 | 状態 |
+| --- | --- |
+| アプリ本体・アノテーション UI | 未実装 |
+| 学習エンジン | 未決定。jax-js が最初の検証候補 |
+| モデルの revision・ハッシュ固定 | 未実施 |
+| 元モデルとブラウザの出力比較 | 未実施 |
+| 分類・検出のブラウザ Fine-tuning | 未実施 |
+| ユーザー定義クラスでの検出精度評価 | 未実施 |
+| 学習後 ONNX の生成と再読込 | 未実施 |
+| Python の ONNX Runtime との一致確認 | 未実施 |
+| 対象エッジ端末での確認 | 未実施 |
+| 学習時間・ピークメモリの測定 | 未実施 |
+| 中断・再開、プロジェクトのバックアップ | 未実装 |
+| GitHub Pages の検証アプリ | 未公開 |
+| Cloudflare 用の配信構成 | 未実装 |
+| アプリ本体のライセンス | 未選定 |
+
+上流モデルの公開ベンチマークとモデルカードは調査済みの参考情報です。本プロジェクトでの学習成功・精度・速度の証拠ではありません。
+
+## 次の作業
+
+[ROADMAP](ROADMAP.md) の P1 を実装するため、正確な依存バージョンとモデル配布物を固定し、最小の技術検証計画を作ります。[VERIFICATION](VERIFICATION.md) の条件に沿って、**ブラウザでの重み更新 → ONNX 生成 → Python での推論**を成立させます。
+
+## 更新の仕方
+
+状態を「実装済み」「検証済み」に変えるときは、対象コミット・PR、実行した確認、結果の記録へのリンクを追加します。端末やモデルによって結果が異なる場合は、確認できた範囲を明記します。
