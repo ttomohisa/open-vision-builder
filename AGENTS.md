@@ -58,6 +58,8 @@
 
 P1a は分類の固定バックボーン + ヘッド更新です。P1b の部分成功は既存80クラスの最終 pretrained bbox/class ヘッドに限り、前段・LQE は固定です。中間特徴の G1 FAIL、独自クラス、全体 fine-tuning・実用精度・WebGPU・メモリ・保存再開は [STATUS](docs/STATUS.md) の残課題を引き継ぎます。検出の調査用モデルは `public/` / `dist/` に入れず、製品画面へ接続しません。モデルバイナリ・ユーザーデータ・生成 fixture の大きな tensor を git に含めません。
 
+追加の `scripts/reproduce_detector_rectangle.py` は、既知の矩形1画像の CPU 診断です。終了0は測定完了であり、sourceParityPassed / 各出力の不一致と qualifiesDetector=false を保持します。新しい実行結果は [2026-10-25 の記録](docs/verification/2026-10-25-rectangle-reproduction.md)を参照し、失われた追加調査全体が復元済みとは扱いません。
+
 ## PR とマージ
 
 - 作業ごとに専用ブランチを用い、`main` へ直接変更を push しない。

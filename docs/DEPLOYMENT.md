@@ -26,6 +26,8 @@ python scripts/predict.py --model artifacts/browser/model.onnx --verify-report a
 
 検出の準備コマンドは現在、変更していない中間特徴量ゲートで終了コード1になります。CI はこの **G1 FAIL** を job summary の全比較表に表示し、全3入力6出力・source hash・最終 logits/boxes/references の合格・診断 manifest を検査してから、独立した部品検証を継続します。欠けたレポート、取得・構造・最終出力の失敗は CI 自体を失敗させます。`continue-on-error` はこの厳格な準備ステップに限定し、検出が合格したという表示には使いません。
 
+既存ゲートの結果を検査した後、`reproduce_detector_rectangle.py` が既知の矩形1画像を CPU で診断します。通常の失敗不可ステップとして実行し、出典・構造・実行例外で CI を停止します。診断の終了0は測定の完了だけで、6出力の数値結果と `sourceParityPassed` を別の summary 表と JSON artifact に残します。この診断に `continue-on-error` は使いません。診断が完了しても検出器の資格判定は変更しません。
+
 `npm run build` は依存修正の確認、ローカル配信用 runtime のコピー、TypeScript、Vite を含みます。ブラウザ検証が保存した分類・検出の完全 ONNX を Python CPU でも確認します。検出では `scripts/verify_detector.py --model artifacts/p1b/browser/model.onnx --report artifacts/p1b/browser/report.json` を実行します。CI が使うのは開発用の公開・生成 fixture で、利用者の画像・モデルを CI へ送る仕組みはありません。
 
 未認定の検出モデルは `artifacts/p1b/detector-assets/unqualified/` に保存し、ブラウザ試験内の route だけで提供します。`dist/models/dfine-nano/` が存在すると配布確認を失敗させます。Pages に検出モデルや検証用画面は公開しません。
