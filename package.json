@@ -7,14 +7,16 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "prepare:deps": "node scripts/patch-jax-onnx-grid-sample.mjs",
+    "check:deps": "node scripts/patch-jax-onnx-grid-sample.mjs --check",
+    "dev": "npm run check:deps && vite --host 127.0.0.1",
     "copy:runtime": "node scripts/copy-runtime.mjs",
-    "build": "npm run copy:runtime && tsc --noEmit && vite build",
+    "build": "npm run check:deps && npm run copy:runtime && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:browser": "playwright test",
+    "test": "npm run check:deps && vitest run",
+    "test:browser": "npm run check:deps && playwright test",
     "preview": "vite preview --host 127.0.0.1",
-    "probe:detector": "node scripts/probe-dfine.mjs"
+    "probe:detector": "npm run check:deps && node scripts/probe-dfine.mjs"
   },
   "dependencies": {
     "@bufbuild/protobuf": "2.16.0",

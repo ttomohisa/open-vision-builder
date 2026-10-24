@@ -2,7 +2,7 @@
 
 更新日: 2026-10-24 JST
 
-状態: 製品全体の設計方針と、実装した P1a の境界を記載する。分類の凍結特徴 + ヘッド学習、完全 ONNX、ブラウザ/Python 一致をローカル検証済み。物体検出、保存・再開、実デプロイなどの状態は [STATUS](STATUS.md) と [実測記録](verification/2026-10-24-browser-classification.md) を参照する。
+状態: 製品全体の設計方針と、P1a 分類・P1b 検出の限定ヘッド検証の境界を記載する。検出の中間特徴量ゲートは FAIL で、製品画面へは接続していない。[STATUS](STATUS.md) と [検出の部分結果](verification/2026-10-24-dfine-foundation.md)を参照する。
 
 ## 1. 責務とデータの境界
 
@@ -28,6 +28,10 @@ API 配備用のキットを提供する場合、そのサーバー、認証、�
 P1a の画像入口は PNG / WebP に ImageDecoder の native pixel copy、opaque JPEG と不透明なYUV画像に createImageBitmap + Canvas を使用し、ICC変換なし・EXIF適用を揃える。固定画像のブラウザ/Python回帰を持つが、未検証codecの全pixel一致を保証しない。
 
 P1a は全画像を224×224へ half-pixel bilinear で伸縮し、ImageNet mean/std、FP32 NCHW を使う。元モデルの bicubic / center crop と異なる recipe で、上流ベンチマークを引き継ぐとはしない。1280次元の特徴を固定し、学習する W `[1280,C]` と b `[C]` を元の分類ヘッドと置換する。[ADR 0002](decisions/0002-classification-spike.md)
+
+P1b の開発用検証は D-FINE Nano の640×640、RGB/255、既存80クラスを使う。ORT Web の固定 prefix から最終 hidden/bbox 入力・前段 corner residual・reference boxes を得て、jax-js で最終 pretrained bbox MLP / class projection を更新する。前段と LQE は固定、損失は最終段 VFL + 5 L1 + 2 GIoU、Hungarian matching と IoU/VFL の教師重みは微分しない。元レシピの補助損失・denoising・FGL/DDF・全層 matching 統合を含む完全 fine-tuning とは別の範囲である。
+
+検出 exporter は、checksummed source ONNX と実テンソルで検証した対応表から8テンソルだけを置換し、全固定グラフと重みを単一 FP32 ONNX に残す。新しい ORT Web session と Python CPU が同じ公開入力を計算する。中間特徴の元実装比較が失敗するため、準備コマンドは非0終了と診断用成果物を残す。調査用モデルを `public/` / `dist/` に配置せず、テスト専用 route だけでブラウザへ渡す。G1 FAIL は部品検証・生成 kit のレポートへ引き継ぐ。[ADR 0003](decisions/0003-dfine-foundation.md)
 
 WebGPU は安全なコンテキストを必要とし、Worker 内でも adapter / device の取得を確認する。API の存在だけで対応済みとは判定しない。[WorkerNavigator.gpu](https://developer.mozilla.org/en-US/docs/Web/API/WorkerNavigator/gpu)
 
@@ -120,4 +124,4 @@ GitHub Pages では custom header に依存せず、非隔離環境での実行�
 
 最初に「ブラウザー fine-tune → 完全な ONNX のローカル生成 → 新しい browser session → Python CPU」の一致を確認する。developer CI はブラウザー生成 fixture に `onnx.checker.check_model(..., full_check=True)` と実推論を実行する。ユーザーごとの export に Python や運営者の変換 endpoint を要求しない。[ONNX checker](https://onnx.ai/onnx/api/checker.html)
 
-構造検証に加え、クラス数の境界、空の検出、各種画像比率、前後処理、学習後の parameter 反映、移動後の artifact 読み込みを確認する。判定基準と実施記録は [VERIFICATION.md](VERIFICATION.md) に集約する。分類の部分結果は [実測記録](verification/2026-10-24-browser-classification.md)、検出の演算不一致は [probe 記録](verification/2026-10-24-dfine-probe.md) にある。未実施の項目を合格としない。
+構造検証に加え、クラス数の境界、空の検出、各種画像比率、前後処理、学習後の parameter 反映、移動後の artifact 読み込みを確認する。判定基準と実施記録は [VERIFICATION.md](VERIFICATION.md) に集約する。分類の部分結果は [実測記録](verification/2026-10-24-browser-classification.md)、検出の部品成功と G1 FAIL は [基礎検証](verification/2026-10-24-dfine-foundation.md) にある。未実施・失敗を合格としない。

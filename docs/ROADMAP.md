@@ -19,7 +19,7 @@ UI を広く作る前に、実際のブラウザ学習と ONNX 出力が成立�
 
 P1a では MobileNetV4 Conv Small の固定特徴 + 分類ヘッドの学習、完全 ONNX、ブラウザ/Python 一致の経路を実装しました。[実測記録](verification/2026-10-24-browser-classification.md) と [ADR 0002](decisions/0002-classification-spike.md) を参照してください。
 
-次は **P1b: D-FINE に必要な GridSample の不一致解消と、事前学習済み検出器の実際の学習**です。現状の [失敗 probe](verification/2026-10-24-dfine-probe.md) を修正・再検証したうえで完全な検出学習へ進めます。分類の成功を P1 全体の完了にしません。
+**P1b は基礎検証を進行中**です。GridSample を修正・独立検証し、事前学習済み D-FINE Nano の最終 bbox / class ヘッド更新、完全 ONNX、独立 browser / Python 推論を確認しました。一方、前段の中間特徴量の一致ゲートは FAIL です。[部分結果](verification/2026-10-24-dfine-foundation.md) と [ADR 0003](decisions/0003-dfine-foundation.md) に従い、この未解決条件、独自クラス、完全な学習レシピ、精度評価を次の PR で進めます。元の失敗や許容差を置き換えて P1 全体を完了にはしません。
 
 最初は MobileNetV4 Conv Small と D-FINE Nano を使って経路を検証し、品質を重視した Medium / Small の候補へ進めます。候補の変更はモデル名だけで判断せず、[MODELS](MODELS.md) の条件と [VERIFICATION](VERIFICATION.md) の結果に基づけます。
 

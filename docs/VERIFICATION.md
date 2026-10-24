@@ -2,7 +2,7 @@
 
 更新日: 2026-10-24 JST
 
-状態: **P1a の分類に部分結果あり。検出の演算 probe は FAIL。全体のリリースゲートは未完了。** 本書の合格条件は維持し、部分結果と未実施を区別する。実測は [分類](verification/2026-10-24-browser-classification.md)、[モデル準備](verification/2026-10-24-model-preparation.md)、[検出 probe](verification/2026-10-24-dfine-probe.md) を参照する。
+状態: **分類と検出の最終ヘッドに部分結果あり。GridSample は修正後 PASS、検出の中間特徴量 G1 は FAIL。全体のリリースゲートは未完了。** 本書の合格条件は維持し、部分結果・失敗・未実施を区別する。[分類](verification/2026-10-24-browser-classification.md)、[モデル準備](verification/2026-10-24-model-preparation.md)、[GridSample 修正](verification/2026-10-24-grid-sample-correction.md)、[D-FINE 基礎検証](verification/2026-10-24-dfine-foundation.md) を参照する。
 
 ## 1. 対象と変更できない条件
 
@@ -23,18 +23,18 @@
 
 | ID | 判定対象 | 状態 |
 | --- | --- | --- |
-| G0 | ソース・重み・商用利用条件・変換履歴の固定 | PARTIAL: 分類 Small の固定配布物・依存・表示を確認。検出の配布物は未採用 |
-| G1 | 元実装とブラウザーの forward 一致 | PARTIAL: Small の公開 fixture で PyTorch / ORT / browser を比較 |
-| G2 | 学習パラメーターへの勾配と実更新 | PARTIAL / detector FAIL: 分類ヘッドの既知勾配と更新を確認。GridSample の forward/backward 不一致 |
-| G3 | 少量データへの過適合と事前学習済み位置推定の更新 | PARTIAL: 分類の合成データで損失低下。位置推定重みの更新は NOT RUN |
+| G0 | ソース・重み・商用利用条件・変換履歴の固定 | PARTIAL: 分類 Small と検証用 Nano COCO の正確な safetensors・コード・Apache 表示・変換記録を固定。検出は製品未採用 |
+| G1 | 元実装とブラウザーの forward 一致 | PARTIAL / detector features FAIL: 分類と検出の最終 logits/boxes は比較済み。検出の bboxInput/classInput/residualCorners に失敗が残る |
+| G2 | 学習パラメーターへの勾配と実更新 | PARTIAL: 分類ヘッド、修正 GridSample の値/両勾配、同一特徴での最終 pretrained bbox/class ヘッドの全勾配・SGD を確認。完全 detector backprop は未実施 |
+| G3 | 少量データへの過適合と事前学習済み位置推定の更新 | PARTIAL: 分類合成データの損失低下。検出の pretrained 位置重み更新・box 変化・2 step 損失低下を確認したが、少量過適合は NOT RUN |
 | G4 | 独自タスクの未使用データ評価と公平な PyTorch 比較 | NOT RUN: 実データ・同条件学習比較なし |
-| G5 | クラス数・空画像・画像形状の境界条件 | PARTIAL: 分類の不正入力・shape・class 変更・取消を検証。全境界は未確認 |
-| G6 | 学習後の完全 FP32 ONNX と独立した推論一致 | PARTIAL: 分類の完全モデルを fresh browser / Python CPU で一致確認。検出・edge 未検証 |
-| G7 | キャッシュ・非公開状態・隠れた通信への非依存 | PARTIAL: 分類出力単体を別 CPU runtime で推論。ユーザー kit はモデル追加取得なし |
+| G5 | クラス数・空画像・画像形状の境界条件 | PARTIAL: 分類の入力/shape/class/取消。検出の空/単一/複数 target・矩形割当・disjoint GIoU 勾配・不正入力・取消を検証。独自クラスは未実施 |
+| G6 | 学習後の完全 FP32 ONNX と独立した推論一致 | PARTIAL: 分類と限定した検出ヘッドの完全モデルを fresh browser / Python CPU で比較。検出 G1 の失敗は解消しない。edge は未検証 |
+| G7 | キャッシュ・非公開状態・隠れた通信への非依存 | PARTIAL: 分類と検出出力を別 CPU runtime で推論。kit はモデル追加取得・変換なし。全対応環境の認定は未完了 |
 | G8 | 実機での時間・メモリー・中断・保存・再開 | PARTIAL: CI相当 Linux の経過時間と取消のみ。対象 PC・メモリ・再開は NOT RUN |
 | G9 | データ非送信と再現可能な証拠の確認 | PARTIAL: 合成 fixture の E2E 通信観測・依存固定。製品全体の確認は未完了 |
 
-全ゲートの証拠を揃えるまで、製品全体を「ブラウザーで学習可能」「ONNX 対応済み」「リリース可能」としない。部分実装について述べる場合は、分類 Small の固定特徴 + ヘッド、WASM、公開 fixture、検証環境など実際に確認した範囲を付記する。
+全ゲートの証拠を揃えるまで、製品全体を「ブラウザーで学習可能」「ONNX 対応済み」「リリース可能」としない。部分実装について述べる場合は、分類 Small の固定特徴 + ヘッド、検出 Nano の既存80クラス最終ヘッド、WASM、公開 fixture、検証環境など実際の範囲を付記する。CI の部品検証成功は G1 FAIL を解消しない。厳格な検出準備コマンドの非0終了と、全比較の失敗レポートを保存する。
 
 ## 3. 実行前に固定する評価仕様
 

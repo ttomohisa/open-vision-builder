@@ -6,7 +6,7 @@
 
 **MobileNetV4 Conv Small の固定特徴 + 新しい分類ヘッドの学習から、完全 FP32 ONNX の生成・独立したブラウザ/Python 推論までを確認した。** これは分類 P1a の限定結果であり、[VERIFICATION](../VERIFICATION.md) の全ゲートや初期版の完成を意味しない。
 
-実画像の品質、分類バックボーンの追加学習、D-FINE 全体の学習、WebGPU、対象 PC のピークメモリ、保存・再開、edge 機器は未検証。D-FINE に関係する [GridSample の不一致](2026-10-24-dfine-probe.md) は別の失敗結果として保持する。
+実画像の品質、分類バックボーンの追加学習、D-FINE 全体の学習、WebGPU、対象 PC のピークメモリ、保存・再開、edge 機器は未検証。当時確認した [GridSample の不一致](2026-10-24-dfine-probe.md) は元実装の失敗結果として保持し、その後の修正と検出の部分結果は [P1b 記録](2026-10-24-dfine-foundation.md) に分ける。
 
 ## 実行条件と事前の合格条件
 
@@ -92,3 +92,21 @@ JPEGと、native formatでopaqueと確認できたYUV画像は、`createImageBit
 この Linux 実行環境の短い合成試験の時間は、ユーザー PC のベンチマークではない。ピークメモリは測っておらず、レポートに `NOT MEASURED` と残す。WebGPU / Edge / Safari / Firefox / edge accelerator の対応を、この結果から推定しない。
 
 GitHub Actions の実行と Pages の公開は、対象 PR の run / build-info.json によって別に確認する。今回のローカル HTTP の成功を、公開 URL の成功として記録しない。
+
+## 追記: PR #3 の公開 Pages での確認とマージ
+
+2026-10-24 04:44 UTC までに、ユーザーが指定した `https://ttomohisa.github.io/open-vision-builder/pr-3/#dataset` を実ブラウザで確認した。対象 commit は `780cf60c4e3af8217120ed16e88fa232d0f95c54`。Chrome 155.0.0.0 / Linux x86_64 / WASM 1 thread / `crossOriginIsolated=false` で、ローカル試験とは別の公開サイト確認である。永続的な記録は [PR #3](https://github.com/ttomohisa/open-vision-builder/pull/3) にも残した。
+
+| 確認 | 公開サイトでの結果 |
+| --- | --- |
+| サンプル → 40 epochs → 評価 → ZIP | 学習8枚 / 評価4枚、weight delta L2 0.4179988557、loss 0.6931471825 → 0.1665393561 |
+| 完全モデル | 9,955,293 bytes、SHA-256 `78b7e3d6a5c6c186587cd66c80e7c971c10a4d11c45088d2f857ac921db30412` |
+| fresh browser / Python 最大差 | 1.1920929e-7 / 1.0132790e-6、両方 PASS |
+| 配布キット | PyTorch / timm / Python ONNX package なしの別環境で実行 |
+| 画像入口 | PNG / JPEG / WebP、alpha付き画像をファイル選択して再学習 |
+| 状態変更 | ラベル変更で旧出力無効化、中断で古い結果なし、train/test重複拒否、重複除去後の再実行 |
+| 静的配信 | 23 URL が HTTP200、モデルhash等の25検査が成功 |
+
+サンプル正解率1.0・経路時間3,278 ms（ZIP作成を除く）は、この合成データと環境の値である。実画像精度、対象PC、ピークメモリの評価ではない。公開ブラウザ操作では完全な通信キャプチャを取っておらず、ローカルE2Eの通信観測と同一視しない。
+
+Pages run `40057951806` attempt 2 の build/verify/deploy が成功し、ユーザーが PR #3 を2026-10-24 04:50 UTCにマージした。merge commit は `037ef78e6e46c5191a11c7556c3127f2b28d6f15`。Pages は次の公開で全体を置き換える方式なので、当時の `pr-3/` URL が現在も残るという意味ではない。

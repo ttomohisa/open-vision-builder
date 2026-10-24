@@ -43,7 +43,7 @@ jobs:
       github.event_name != 'pull_request' ||
       github.repository != 'ttomohisa/open-vision-builder' ||
       github.event.pull_request.head.repo.full_name != github.repository ||
-      github.event.pull_request.head.ref != 'feat/browser-classification-spike' ||
+      !contains(fromJSON('["feat/browser-classification-spike","feat/dfine-training-foundation"]'), github.event.pull_request.head.ref) ||
       github.event.pull_request.base.ref != 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -80,19 +80,85 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: scripts/requirements-models.txt
+          cache-dependency-path: |
+            scripts/requirements-models.txt
+            scripts/requirements-detector.txt
 
       - name: Install JavaScript dependencies without lifecycle scripts
         run: npm ci --ignore-scripts
 
+      - name: Apply the exact-hash GridSample correction
+        run: npm run prepare:deps
+
       - name: Install model preparation dependencies
         run: python -m pip install -r scripts/requirements-models.txt
+
+      - name: Install the isolated detector reference environment
+        run: |
+          python -m venv artifacts/p1b/.venv-detector
+          artifacts/p1b/.venv-detector/bin/python -m pip install -r scripts/requirements-detector.txt
 
       - name: Verify model preparation and Python parity helpers
         run: python -m unittest discover -s tests -p '*_test.py'
 
       - name: Prepare and verify the pinned public model
         run: python scripts/prepare_model.py
+
+      - name: Verify the independent GridSample reference
+        run: python scripts/generate_grid_sample_reference.py --check
+
+      - name: Qualify D-FINE forward including all intermediate features
+        id: detector_qualification
+        # Preserve the strict nonzero G1 result, then collect bounded component
+        # evidence. The following step rejects missing or invalid failure reports.
+        continue-on-error: true
+        run: >-
+          artifacts/p1b/.venv-detector/bin/python scripts/prepare_detector.py
+          --output-dir artifacts/p1b/detector-assets/prepared
+          --diagnostic-dir artifacts/p1b/detector-assets/unqualified
+
+      - name: Validate and prominently report the detector qualification outcome
+        env:
+          QUALIFICATION_OUTCOME: ${{ steps.detector_qualification.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          passed = os.environ['QUALIFICATION_OUTCOME'] == 'success'
+          directory = Path('artifacts/p1b/detector-assets') / ('prepared' if passed else 'unqualified')
+          report = json.loads((directory / 'preparation.json').read_text())
+          manifest = json.loads((directory / 'model.json').read_text())
+          assert report['passed'] is passed
+          assert manifest['status'] == ('developer-investigation' if passed else 'unqualified-intermediate-parity-failure')
+          assert report['source']['sha256'] == '19e06bdc873da819920a8d373b879721a5b9759d822f8213220bb09abbdab58b'
+          assert [f['phase'] for f in report['fixtures']] == [0, 37, 91]
+          all_results = []
+          rows = []
+          for fixture in report['fixtures']:
+              comparisons = fixture['comparisons']
+              assert set(comparisons) == {'logits', 'boxes', 'bboxInput', 'classInput', 'residualCorners', 'references'}
+              for name in ('logits', 'boxes', 'references'):
+                  assert comparisons[name]['passed'], f'Unexpected final-output/reference failure: {fixture["phase"]}/{name}'
+              for name, value in comparisons.items():
+                  assert isinstance(value['passed'], bool)
+                  all_results.append(value['passed'])
+                  rows.append(f'| {fixture["phase"]} | {name} | {"PASS" if value["passed"] else "FAIL"} |')
+          assert all(all_results) is passed
+          assert manifest['fixtures'] == report['fixtures']
+          with open(os.environ['GITHUB_ENV'], 'a') as handle:
+              handle.write(f'OVB_DETECTOR_ASSETS={directory}\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as handle:
+              handle.write('## Detector G1 qualification: ' + ('PASS' if passed else 'FAIL — unresolved') + '\n\n')
+              handle.write('The foundation checks below do not clear failed feature gates or establish detector readiness. Investigation assets are excluded from Pages.\n\n')
+              handle.write('| Fixture phase | Tensor | Result |\n| --- | --- | --- |\n' + '\n'.join(rows) + '\n')
+          PY
+
+      - name: Compare the pretrained final head and all parameter updates to PyTorch
+        run: |
+          artifacts/p1b/.venv-detector/bin/python scripts/generate_detector_training_reference.py --pretrained --cache-dir artifacts/p1b/detector-assets/source --output artifacts/p1b/training/pretrained-reference.json
+          node scripts/verify_detector_training.mjs --reference artifacts/p1b/training/pretrained-reference.json --report artifacts/p1b/training/pretrained-js-verification.json
 
       - name: Build and typecheck
         run: npm run build
@@ -108,6 +174,8 @@ jobs:
           from pathlib import Path
 
           root = Path('dist')
+          if (root / 'models/dfine-nano').exists():
+              raise SystemExit('Unqualified detector investigation assets must not be published')
           for relative in ('index.html', 'models/mobilenetv4-small/model.json',
                            'models/mobilenetv4-small/backbone.onnx'):
               if not (root / relative).is_file():
@@ -142,6 +210,13 @@ jobs:
           python scripts/predict.py
           --model artifacts/browser/model.onnx
           --verify-report artifacts/browser/report.json
+
+      - name: Verify the bounded detector export with independent Python CPU inference
+        run: >-
+          python scripts/verify_detector.py
+          --model artifacts/p1b/browser/model.onnx
+          --report artifacts/p1b/browser/report.json
+          --output artifacts/p1b/browser/python-verification.json
 
       - name: Save the verified static build, public model, and runtimes
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -205,6 +280,15 @@ jobs:
           name: browser-evidence-${{ github.run_attempt }}
           path: |
             artifacts/browser/
+            artifacts/p1b/grid-sample-browser.json
+            artifacts/p1b/browser/
+            artifacts/p1b/training/pretrained-js-verification.json
+            artifacts/p1b/detector-assets/prepared/model.json
+            artifacts/p1b/detector-assets/prepared/preparation.json
+            artifacts/p1b/detector-assets/prepared/inventory.json
+            artifacts/p1b/detector-assets/unqualified/model.json
+            artifacts/p1b/detector-assets/unqualified/preparation.json
+            artifacts/p1b/detector-assets/unqualified/inventory.json
             test-results/
             playwright-report/
           if-no-files-found: ignore

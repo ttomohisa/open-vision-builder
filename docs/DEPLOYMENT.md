@@ -10,9 +10,11 @@ workflow ファイルの追加だけでは Pages の初期設定や公開は完�
 
 ```bash
 npm ci --ignore-scripts
+npm run prepare:deps
 python -m pip install -r scripts/requirements-models.txt
 python -m unittest discover -s tests -p '*_test.py'
 python scripts/prepare_model.py
+python scripts/generate_grid_sample_reference.py --check
 npm run build
 npm test
 npx playwright install --with-deps chromium
@@ -20,7 +22,13 @@ npm run test:browser
 python scripts/predict.py --model artifacts/browser/model.onnx --verify-report artifacts/browser/report.json
 ```
 
-`npm run build` はローカル配信用 runtime のコピー、TypeScript の型検査、Vite のビルドを含みます。ブラウザ検証が保存した完全な ONNX と同じ入力・logits を Python の ONNX Runtime CPU で確認します。CI で使用するのは開発用の公開・生成 fixture です。利用者が作ったモデルや画像を CI へ送る仕組みはありません。
+上記のビルド前に、CI は別の Python venv に `scripts/requirements-detector.txt` を入れ、`prepare_detector.py` と独立した pretrained head の参照生成・照合も実行します。[README の開発用 D-FINE 手順](../README.md#開発用-d-fine-検証)を参照してください。
+
+検出の準備コマンドは現在、変更していない中間特徴量ゲートで終了コード1になります。CI はこの **G1 FAIL** を job summary の全比較表に表示し、全3入力6出力・source hash・最終 logits/boxes/references の合格・診断 manifest を検査してから、独立した部品検証を継続します。欠けたレポート、取得・構造・最終出力の失敗は CI 自体を失敗させます。`continue-on-error` はこの厳格な準備ステップに限定し、検出が合格したという表示には使いません。
+
+`npm run build` は依存修正の確認、ローカル配信用 runtime のコピー、TypeScript、Vite を含みます。ブラウザ検証が保存した分類・検出の完全 ONNX を Python CPU でも確認します。検出では `scripts/verify_detector.py --model artifacts/p1b/browser/model.onnx --report artifacts/p1b/browser/report.json` を実行します。CI が使うのは開発用の公開・生成 fixture で、利用者の画像・モデルを CI へ送る仕組みはありません。
+
+未認定の検出モデルは `artifacts/p1b/detector-assets/unqualified/` に保存し、ブラウザ試験内の route だけで提供します。`dist/models/dfine-nano/` が存在すると配布確認を失敗させます。Pages に検出モデルや検証用画面は公開しません。
 
 成功した run の `static-build-<commit>-<attempt>` artifact に `dist/` の内容を保存します。公開モデル、必要な利用条件の表示、WASM runtime を含みます。検証記録と診断情報は `browser-evidence-<attempt>` artifact に保存し、いずれも保持期間は7日です。モデルのバイナリや runtime は git にコミットしません。
 
@@ -46,7 +54,7 @@ CI は merge commit を検証します。Pages 用の同じ検証処理は、PR 
 | イベント | ソース | ビルド時の base path |
 | --- | --- | --- |
 | `main` への push | その push の commit | `/open-vision-builder/` |
-| 同じリポジトリの `feat/browser-classification-spike` から `main` への PR | PR の head SHA | `/open-vision-builder/pr-N/` |
+| 同じリポジトリの `feat/browser-classification-spike` または `feat/dfine-training-foundation` から `main` への PR | PR の head SHA | `/open-vision-builder/pr-N/` |
 | `main` 上の手動実行 | 選択した `main` の commit | `/open-vision-builder/` |
 
 他のブランチと fork の PR は通常の CI のみを実行します。Pages 用 build も CI と同じ Node/Python、ブラウザ学習・ONNX 検証を通します。信頼済みブランチから `main` への PR では、通常の CI job をスキップして Pages 内の共通検証だけを実行します。`PAGES_ENABLED` が未設定でも、この検証は省略しません。

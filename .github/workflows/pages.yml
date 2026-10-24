@@ -24,7 +24,7 @@ jobs:
        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
        (github.event_name == 'pull_request' &&
         github.event.pull_request.head.repo.full_name == github.repository &&
-        github.event.pull_request.head.ref == 'feat/browser-classification-spike'))
+        contains(fromJSON('["feat/browser-classification-spike","feat/dfine-training-foundation"]'), github.event.pull_request.head.ref)))
     permissions:
       contents: read
     uses: ./.github/workflows/ci.yml

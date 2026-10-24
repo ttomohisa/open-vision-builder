@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 const base = process.env.OVB_BASE ?? '/open-vision-builder/';
 export default defineConfig({
   testDir: './tests',
-  testMatch: ['**/browser.spec.ts', '**/decode.browser.spec.ts'],
+  testMatch: ['**/browser.spec.ts', '**/*.browser.spec.ts'],
   fullyParallel: false,
   workers: 1,
   timeout: 180_000,

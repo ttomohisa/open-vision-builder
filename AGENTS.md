@@ -44,15 +44,19 @@
 
 準備・起動は [README](README.md)、配信は [DEPLOYMENT](docs/DEPLOYMENT.md) を参照します。
 
-- `npm ci --ignore-scripts`、Python 3.12 の venv に `scripts/requirements-models.txt` を導入。
+- `npm ci --ignore-scripts` の後に `npm run prepare:deps`。固定した jax-js ONNX の ESM/CJS/ライセンス hash を検証して4行の GridSample 修正を適用し、`check:deps` が未準備・未知の差分を拒否する。
+- Python 3.12 の分類 venv に `scripts/requirements-models.txt`、別の `artifacts/p1b/.venv-detector` に `scripts/requirements-detector.txt` を導入する。依存版が異なるので同じ環境へ上書きしない。
 - `python scripts/prepare_model.py`: 固定した公開重みを検証・変換し、ignored の `public/models/` に準備。ユーザーデータを使わない。
 - `npm run build`: runtime / license の配置、TypeScript、Vite。
 - `npm test` と `python -m unittest discover -s tests -p '*_test.py'`: 数値・export・Python 処理の検証。
 - `npm run test:browser`: 準備済みモデルと build と Playwright Chromium が必要。実際のブラウザ生成物を `artifacts/browser/` に保存。
 - `python scripts/predict.py --model artifacts/browser/model.onnx --verify-report artifacts/browser/report.json`: 完全モデルの Python CPU 一致確認。
-- `npm run probe:detector`: 現在の既知の GridSample 不一致を示して終了コード1。通常テストの成功に含めない。修正時は元実装との値・勾配を再確認する。
+- `npm run probe:detector`: 修正済み GridSample の独立値・勾配確認。現在は成功。修正前の失敗は元の記録に保持する。
+- `python scripts/prepare_detector.py`: 検出の source / graph / 全3入力6出力を検証。中間特徴量の不一致では終了コード1、調査用ファイルを `artifacts/p1b/detector-assets/unqualified/` に保持する。許容差の変更や `|| true` での無条件通過は禁止。CI は失敗レポートの完全性と最終出力を検査してから部品検証を続け、G1 FAIL を明示する。
+- `generate_detector_training_reference.py` / `verify_detector_training.mjs`: 同一元特徴に対する全ヘッド勾配・2 SGD step を比較。実行引数は README に記載。
+- `python scripts/verify_detector.py --model artifacts/p1b/browser/model.onnx --report artifacts/p1b/browser/report.json`: 検出の完全 ONNX を独立 Python CPU で比較する。
 
-P1a は分類の固定バックボーン + ヘッド更新だけです。物体検出・全体 fine-tuning・実用精度・WebGPU・メモリ・保存再開を実装済みと扱わず、[STATUS](docs/STATUS.md) の残課題を引き継ぎます。モデルバイナリ・ユーザーデータ・生成 fixture の大きな tensor を git に含めません。
+P1a は分類の固定バックボーン + ヘッド更新です。P1b の部分成功は既存80クラスの最終 pretrained bbox/class ヘッドに限り、前段・LQE は固定です。中間特徴の G1 FAIL、独自クラス、全体 fine-tuning・実用精度・WebGPU・メモリ・保存再開は [STATUS](docs/STATUS.md) の残課題を引き継ぎます。検出の調査用モデルは `public/` / `dist/` に入れず、製品画面へ接続しません。モデルバイナリ・ユーザーデータ・生成 fixture の大きな tensor を git に含めません。
 
 ## PR とマージ
 
