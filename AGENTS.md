@@ -40,6 +40,20 @@
 - ユーザーのデータ、認証情報、巨大なモデルのバイナリをリポジトリへ混入させない。参照用データは出典・利用条件を確認する。
 - 実際に存在するビルドコマンドと、実行した確認を記載する。アプリ未実装の段階では文書の確認を行い、存在しないコマンドや成功していないテストを README・PR に記載しない。
 
+## 現在の実行コマンドと検証範囲
+
+準備・起動は [README](README.md)、配信は [DEPLOYMENT](docs/DEPLOYMENT.md) を参照します。
+
+- `npm ci --ignore-scripts`、Python 3.12 の venv に `scripts/requirements-models.txt` を導入。
+- `python scripts/prepare_model.py`: 固定した公開重みを検証・変換し、ignored の `public/models/` に準備。ユーザーデータを使わない。
+- `npm run build`: runtime / license の配置、TypeScript、Vite。
+- `npm test` と `python -m unittest discover -s tests -p '*_test.py'`: 数値・export・Python 処理の検証。
+- `npm run test:browser`: 準備済みモデルと build と Playwright Chromium が必要。実際のブラウザ生成物を `artifacts/browser/` に保存。
+- `python scripts/predict.py --model artifacts/browser/model.onnx --verify-report artifacts/browser/report.json`: 完全モデルの Python CPU 一致確認。
+- `npm run probe:detector`: 現在の既知の GridSample 不一致を示して終了コード1。通常テストの成功に含めない。修正時は元実装との値・勾配を再確認する。
+
+P1a は分類の固定バックボーン + ヘッド更新だけです。物体検出・全体 fine-tuning・実用精度・WebGPU・メモリ・保存再開を実装済みと扱わず、[STATUS](docs/STATUS.md) の残課題を引き継ぎます。モデルバイナリ・ユーザーデータ・生成 fixture の大きな tensor を git に含めません。
+
 ## PR とマージ
 
 - 作業ごとに専用ブランチを用い、`main` へ直接変更を push しない。

@@ -1,0 +1,14 @@
+version: v2
+inputs:
+  - git_repo: https://github.com/onnx/onnx.git
+    tag: v1.20.0
+    subdir: onnx
+    paths:
+      - onnx.proto
+plugins:
+  - local: protoc-gen-es
+    out: dist
+    opt:
+      - target=js+dts
+      - import_extension=js
+      - js_import_style=module

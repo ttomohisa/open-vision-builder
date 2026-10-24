@@ -1,0 +1,218 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+    inputs:
+      source_ref:
+        description: Exact source commit to check out; ordinary PR CI uses the merge commit.
+        required: false
+        default: ''
+        type: string
+      base_path:
+        description: Absolute URL subpath for the static build and browser tests.
+        required: false
+        default: /open-vision-builder/
+        type: string
+      pages_subdirectory:
+        description: Empty for main, or pr-N for the single active Pages preview.
+        required: false
+        default: ''
+        type: string
+      upload_pages:
+        description: Also assemble and upload a GitHub Pages artifact.
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      source_commit:
+        description: Commit checked out and verified by this run.
+        value: ${{ jobs.verify.outputs.source_commit }}
+      pages_artifact:
+        description: Name of the Pages artifact from this build attempt.
+        value: ${{ jobs.verify.outputs.pages_artifact }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    # Pages calls this same verifier for the trusted PR, so run it only once.
+    if: >-
+      inputs.upload_pages ||
+      github.event_name != 'pull_request' ||
+      github.repository != 'ttomohisa/open-vision-builder' ||
+      github.event.pull_request.head.repo.full_name != github.repository ||
+      github.event.pull_request.head.ref != 'feat/browser-classification-spike' ||
+      github.event.pull_request.base.ref != 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    env:
+      OVB_BASE: ${{ inputs.base_path || '/open-vision-builder/' }}
+      CI: 'true'
+    outputs:
+      source_commit: ${{ steps.source.outputs.commit }}
+      pages_artifact: ${{ steps.source.outputs.pages_artifact }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          persist-credentials: false
+
+      - name: Record source and artifact identity
+        id: source
+        shell: bash
+        run: |
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "pages_artifact=github-pages-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/requirements-models.txt
+
+      - name: Install JavaScript dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Install model preparation dependencies
+        run: python -m pip install -r scripts/requirements-models.txt
+
+      - name: Verify model preparation and Python parity helpers
+        run: python -m unittest discover -s tests -p '*_test.py'
+
+      - name: Prepare and verify the pinned public model
+        run: python scripts/prepare_model.py
+
+      - name: Build and typecheck
+        run: npm run build
+
+      - name: Record build metadata and require distributable assets
+        env:
+          SOURCE_COMMIT: ${{ steps.source.outputs.commit }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path('dist')
+          for relative in ('index.html', 'models/mobilenetv4-small/model.json',
+                           'models/mobilenetv4-small/backbone.onnx'):
+              if not (root / relative).is_file():
+                  raise SystemExit(f'Missing distributable asset: {relative}')
+          if not any((root / 'runtime').rglob('*.wasm')):
+              raise SystemExit('Missing local WASM runtime assets')
+          metadata = {
+              'schemaVersion': 1,
+              'commit': os.environ['SOURCE_COMMIT'],
+              'pullRequest': int(os.environ['PR_NUMBER']) if os.environ['PR_NUMBER'] else None,
+              'basePath': os.environ['OVB_BASE'],
+              'workflowRun': (
+                  f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}"
+                  f"/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+              ),
+          }
+          (root / 'build-info.json').write_text(
+              json.dumps(metadata, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Install Chromium and its system dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify the browser training and full ONNX export
+        run: npm run test:browser
+
+      - name: Verify the browser export with Python ONNX Runtime CPU
+        run: >-
+          python scripts/predict.py
+          --model artifacts/browser/model.onnx
+          --verify-report artifacts/browser/report.json
+
+      - name: Save the verified static build, public model, and runtimes
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: static-build-${{ steps.source.outputs.commit }}-${{ github.run_attempt }}
+          path: dist/
+          if-no-files-found: error
+          compression-level: 1
+          retention-days: 7
+
+      - name: Assemble the Pages site
+        if: inputs.upload_pages
+        env:
+          PREVIEW_DIRECTORY: ${{ inputs.pages_subdirectory }}
+        run: |
+          python - <<'PY'
+          import html
+          import json
+          import os
+          import re
+          import shutil
+          from pathlib import Path
+
+          source = Path('dist')
+          site = Path('_site')
+          subdirectory = os.environ['PREVIEW_DIRECTORY']
+          if subdirectory and not re.fullmatch(r'pr-[1-9][0-9]*', subdirectory):
+              raise SystemExit('Invalid preview subdirectory')
+          if site.exists():
+              shutil.rmtree(site)
+          target = site / subdirectory if subdirectory else site
+          shutil.copytree(source, target)
+          if subdirectory:
+              metadata = json.loads((source / 'build-info.json').read_text(encoding='utf-8'))
+              commit = html.escape(metadata['commit'])
+              number = subdirectory.removeprefix('pr-')
+              (site / 'index.html').write_text(
+                  '<!doctype html><html lang="ja"><meta charset="utf-8">'
+                  '<meta name="viewport" content="width=device-width,initial-scale=1">'
+                  '<title>Open Vision Builder preview</title>'
+                  '<h1>Open Vision Builder</h1>'
+                  f'<p>PR #{number} / commit <code>{commit}</code></p>'
+                  f'<p><a href="./{subdirectory}/">検証アプリを開く</a></p>'
+                  '<p>公開中のプレビューは1件です。次の公開で置き換わります。</p>'
+                  '</html>', encoding='utf-8')
+              shutil.copy2(source / 'build-info.json', site / 'build-info.json')
+          PY
+
+      - name: Upload the verified Pages site
+        if: inputs.upload_pages
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          name: ${{ steps.source.outputs.pages_artifact }}
+          path: _site
+          retention-days: 7
+
+      - name: Save public-fixture evidence and browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: browser-evidence-${{ github.run_attempt }}
+          path: |
+            artifacts/browser/
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          compression-level: 1
+          retention-days: 7
+
+      - name: Explain why deployment is disabled
+        if: inputs.upload_pages && vars.PAGES_ENABLED != 'true'
+        run: |
+          echo 'Pages artifact is ready. Deployment is disabled until repository PAGES_ENABLED is true.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Complete the Pages and environment setup in docs/DEPLOYMENT.md, then re-run all jobs.' >> "$GITHUB_STEP_SUMMARY"
