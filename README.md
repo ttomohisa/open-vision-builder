@@ -8,7 +8,7 @@ A browser-based vision model builder for image classification and object detecti
 
 ## 現在できること
 
-**P1a: 分類の技術検証を実装しました。製品の初期版と、分類・物体検出を含む P1 全体は未完成です。**
+**P1a の分類画面を実装済み。P1b は D-FINE の限定した学習・完全 ONNX の基礎検証を追加しています。製品の初期版と P1 全体は未完成です。**
 
 - 2〜8クラスの画像を取り込み、学習用と評価用に分ける。
 - 事前学習済み **MobileNetV4 Conv Small** の特徴抽出部分を固定し、新しい分類ヘッドをブラウザで学習する。
@@ -17,9 +17,11 @@ A browser-based vision model builder for image classification and object detecti
 
 画像・ラベル・学習後の重みをサーバーへ送る経路はありません。アプリ、公開モデル、WASM の取得は同じサイトの静的ファイルへの GET です。アプリの操作で Python や変換サーバーを呼びません。
 
-学習は現在 **WASM / CPU、分類ヘッドのみ**です。WebGPU、バックボーンの Fine-tuning、物体検出、実データでの品質、ピークメモリ、保存・再開は未対応または未検証です。生成サンプルの正解率は実画像の品質を示しません。ページを閉じると作業中のデータは失われるため、必要なモデルは先にダウンロードしてください。
+公開画面の学習は現在 **WASM / CPU、分類ヘッドのみ**です。開発用の検出試験では、COCO 学習済み D-FINE Nano の最終 bbox / class ヘッドを実更新し、完全 ONNX をブラウザと Python で照合しています。ただし、元実装と frozen prefix の中間特徴量の一致ゲートは **FAIL** です。検出モデルを画面から選択したり、Pages のモデルとして公開したりする段階にはしていません。
 
-[実測記録](docs/verification/2026-10-24-browser-classification.md)・[現在の状態](docs/STATUS.md)・[D-FINE の演算検証で見つかった問題](docs/verification/2026-10-24-dfine-probe.md)に、確認した範囲と残課題を記録しています。
+独自クラスの検出、WebGPU、バックボーンの Fine-tuning、実データでの品質、ピークメモリ、保存・再開は未対応または未検証です。生成サンプルの正解率は実画像の品質を示しません。ページを閉じると作業中のデータは失われるため、必要なモデルは先にダウンロードしてください。
+
+[分類の実測](docs/verification/2026-10-24-browser-classification.md)・[検出の部分結果と未解決ゲート](docs/verification/2026-10-24-dfine-foundation.md)・[現在の状態](docs/STATUS.md)に、確認した範囲と残課題を記録しています。
 
 ## ローカルで試す
 
@@ -27,6 +29,7 @@ A browser-based vision model builder for image classification and object detecti
 
 ```bash
 npm ci --ignore-scripts
+npm run prepare:deps
 python3.12 -m venv .venv
 .venv/bin/python -m pip install -r scripts/requirements-models.txt
 .venv/bin/python scripts/prepare_model.py
@@ -51,13 +54,39 @@ python predict.py --model model.onnx --image image.png --labels labels.json
 npm test
 .venv/bin/python -m unittest discover -s tests -p '*_test.py'
 npx playwright install --with-deps chromium
-npm run test:browser
+npm run test:browser -- tests/browser.spec.ts tests/decode.browser.spec.ts
 .venv/bin/python scripts/predict.py --model artifacts/browser/model.onnx --verify-report artifacts/browser/report.json
 ```
 
-ブラウザテストは `npm run build` と公開モデル準備後に実行します。実際の事前学習済み重みで学習・ダウンロードを行い、その出力を Python CPU でも確認します。サブパスを変える場合はビルドとブラウザテストの両方に同じ `OVB_BASE` を指定します。
+上記は分類のブラウザテストです。`npm run build` と公開モデル準備後に、実際の事前学習済み重みで学習・ダウンロードを行い、その出力を Python CPU でも確認します。引数なしの `npm run test:browser` は検出試験も含むため、下記の D-FINE 調査用成果物も先に準備します。サブパスを変える場合はビルドとブラウザテストの両方に同じ `OVB_BASE` を指定します。
 
-`npm run probe:detector` は別の検証です。現在固定した jax-js の GridSample に既知の不一致があり、**終了コード1が未解決の検出ゲートを示します**。通常の合格テストへ置き換えません。
+`npm run prepare:deps` は、固定した `@jax-js/onnx` 配布物の全ファイル hash と MIT 表示を確認し、GridSample の隣接 index 計算を修正します。インストール時の自動スクリプトにはしていません。`npm run check:deps` は読み取り専用で適用結果を確認し、不明な版や変更済みの配布物は拒否します。`npm ci --ignore-scripts` のたびに準備をやり直します。
+
+`npm run probe:detector` は修正済み GridSample の値・両勾配を検証し、現在は成功します。[元実装の失敗](docs/verification/2026-10-24-dfine-probe.md)と[修正の独立検証](docs/verification/2026-10-24-grid-sample-correction.md)を分けて記録しています。この演算の成功だけで検出器全体のゲートは合格にしません。
+
+### 開発用 D-FINE 検証
+
+検出の追加依存は分類と別の環境に入れます。準備処理は公開重みだけを扱い、各 revision・hash・形状・ライセンスを検査します。
+
+```bash
+python3.12 -m venv artifacts/p1b/.venv-detector
+artifacts/p1b/.venv-detector/bin/python -m pip install -r scripts/requirements-detector.txt
+artifacts/p1b/.venv-detector/bin/python scripts/prepare_detector.py
+```
+
+最後のコマンドは現在、**中間特徴量の不一致で終了コード1**になります。許容差は変更していません。全3入力・6出力の失敗レポートと調査用成果物を `artifacts/p1b/detector-assets/unqualified/` に残し、合格したモデルの出力先には公開しません。ダウンロード・hash・構造の失敗を、この既知の数値差として扱わないようにしています。
+
+この失敗と独立に、同一特徴量を与えた最終ヘッドの forward・損失・全パラメータ勾配・SGD と、ブラウザで生成した完全モデルを検証できます。
+
+```bash
+artifacts/p1b/.venv-detector/bin/python scripts/generate_detector_training_reference.py --pretrained --cache-dir artifacts/p1b/detector-assets/source --output artifacts/p1b/training/pretrained-reference.json
+node scripts/verify_detector_training.mjs --reference artifacts/p1b/training/pretrained-reference.json --report artifacts/p1b/training/pretrained-js-verification.json
+npm run build
+npm run test:browser
+.venv/bin/python scripts/verify_detector.py --model artifacts/p1b/browser/model.onnx --report artifacts/p1b/browser/report.json --output artifacts/p1b/browser/python-verification.json
+```
+
+ブラウザ試験は調査用モデルをテスト専用のローカル URL で読むため、`public/` や `dist/` に D-FINE をコピーする必要はありません。部品検証の成功、検出の `detectorQualification: FAIL`、製品全体の未完了をレポートと ZIP に残します。80 COCO クラスを維持した最終段だけの学習で、独自クラス・元レシピ全体・実用精度の成立を意味しません。
 
 `dist/` は静的配信できます。GitHub Pages 用 CI・公開 workflow と Cloudflare 用の設定は [DEPLOYMENT](docs/DEPLOYMENT.md) を参照してください。Pages の初回設定と実際の公開確認は別工程です。公開確認前の URL はプレビューとして案内しません。
 

@@ -1,0 +1,12 @@
+{
+  "recordedBeforeExecution": true,
+  "recipe": "Frozen complete D-FINE Nano prefix and LQE; final pretrained bbox MLP and class projection; 80 original COCO classes; final-output VFL + 5*L1 + 2*GIoU; no auxiliary, FGL, DDF or denoising losses",
+  "assignment": "identical indices to scipy.optimize.linear_sum_assignment for non-tied fixed fixtures",
+  "componentFixture": {"absolute": 0.00001, "relative": 0.00001},
+  "pretrainedForward": {"absolute": 0.0002, "relative": 0.0002},
+  "pretrainedLoss": {"absolute": 0.0002, "relative": 0.0002},
+  "pretrainedGradient": {"absolute": 0.0002, "relative": 0.002},
+  "pretrainedSgdWeights": {"absolute": 0.000005, "relative": 0.00002},
+  "optimizer": {"name": "SGD", "learningRate": 0.0001, "momentum": 0, "weightDecay": 0, "steps": 2},
+  "behavior": "All values and gradients finite; nonzero gradient and actual FP32 update in pretrained localization; loss after two steps lower than before; frozen tensors bit-identical; no quality or overfitting claim."
+}

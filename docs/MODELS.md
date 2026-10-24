@@ -3,7 +3,7 @@
 レビュー日: **2026-10-24 JST**
 
 本書は ONNX を初期要件とする画像分類・物体検出のモデル選定方針を定める。
-MobileNetV4 Conv Small は P1a の分類技術検証に限定して固定・変換・ブラウザ学習・ONNX 一致を確認した。その他は候補であり、製品版全体の品質・資源・検出学習の採用ゲートは未完了。
+MobileNetV4 Conv Small は P1a の分類技術検証に限定して固定・変換・ブラウザ学習・ONNX 一致を確認した。D-FINE Nano COCO は P1b の最終ヘッド学習・完全 ONNX の調査用に固定したが、中間特徴量の一致は FAIL のため製品未採用。製品全体の品質・資源・検出学習の採用ゲートは未完了。
 
 関連文書: [製品要件](PRODUCT.md) / [構成](ARCHITECTURE.md) / [検証計画](VERIFICATION.md) / [進捗](STATUS.md)
 
@@ -97,7 +97,25 @@ Hugging Face の重みを選んだ後に、便宜上別の `.pth` を使う変�
 
 出典、変換処理、固定したライセンス本文の hash、元モデルとの比較は [モデル準備記録](verification/2026-10-24-model-preparation.md) を参照する。準備は checksum 検証後の safetensors のみを読み込み、pickle を使わない。ブラウザも配信 ONNX の checksum を検証する。固定済みの配布物の商用利用条件の確認と、製品の品質・全機能の完成は別に判定する。
 
-D-FINE は必要演算の [境界不一致](verification/2026-10-24-dfine-probe.md) を確認した段階で、モデル本体の移植・学習・ONNX 再出力はまだ検証していない。
+## P1b で固定した検出の調査用成果物
+
+| 項目 | 固定値 / 確認内容 |
+| --- | --- |
+| 重み | `ustc-community/dfine-nano-coco` の `model.safetensors`、COCO-only |
+| HF revision | `066438d3d8f0da137a37b38fdf3368fd4afceced` |
+| 重み SHA-256 / サイズ | `19e06bdc873da819920a8d373b879721a5b9759d822f8213220bb09abbdab58b` / 15,278,996 bytes |
+| 実行実装 | Transformers 4.56.0 / commit `e7d351cebad5f6dcdd169b0c034fdee0a000e6a9`、PyTorch 2.6.0 CPU |
+| 変換元の来歴 | D-FINE reference commit `956d1709314c2c6a4df6f34de232054578a7449f`。HF 変換コード commit `be5169c704bae3d1d76d2890be5c72bcbc8c5de2` を保存 |
+| Nano 変換修正 | 選んだ HF revision は `Fix weights (#1)` の merge。Nano attention K/V の既知修正を含む。別の checkpoint への差し替えはしていない |
+| 利用条件 | 固定モデルカードは Apache-2.0。D-FINE と Transformers の LICENSE、モデルカード、変換・変更 NOTICE を保持。Objects365 重みは不使用 |
+| ONNX | 全重み内包 FP32、opset17、640×640 / batch1。`detector.onnx` 16,161,249 bytes、`frozen-prefix.onnx` 15,883,227 bytes |
+| 入出力 | `images [1,3,640,640]` RGB/255 → `logits [1,300,80]`、normalized cxcywh `boxes [1,300,4]` |
+| 限定学習 | 最終 bbox MLP と class projection の8テンソル、60,372パラメータ。前段・LQE・既存80クラスは固定 |
+| 採用判定 | 最終出力・限定ヘッド・完全 export は部分検証済み。中間特徴 G1 は FAIL。調査用ファイルは `artifacts/` のみで、Pages 配布・製品選択には含めない |
+
+[固定したモデルカード](https://huggingface.co/ustc-community/dfine-nano-coco/blob/066438d3d8f0da137a37b38fdf3368fd4afceced/README.md)、[COCO-only 重みについてのメンテナの説明](https://github.com/Peterande/D-FINE/issues/357#issuecomment-5344034723)、[Nano 変換修正](https://github.com/huggingface/transformers/pull/40257)を来歴の根拠にする。HF safetensors と元の `.pth` の数値同一性は未検証であり、比較した元実装は固定した Transformers の PyTorch 実装を指す。
+
+全 source 文書の hash、形状と initializer 対応、graph inventory、3入力の全比較を準備レポートへ保存する。型や hash の不一致は停止し、数値ゲートの失敗は明示した未認定の診断用ディレクトリだけに保存する。[D-FINE 基礎検証](verification/2026-10-24-dfine-foundation.md)と[ADR 0003](decisions/0003-dfine-foundation.md)を参照する。
 
 ## 4. モデルレジストリーの必須項目
 
