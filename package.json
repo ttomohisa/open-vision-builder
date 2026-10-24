@@ -1,0 +1,40 @@
+{
+  "name": "open-vision-builder",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "copy:runtime": "node scripts/copy-runtime.mjs",
+    "build": "npm run copy:runtime && tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "preview": "vite preview --host 127.0.0.1",
+    "probe:detector": "node scripts/probe-dfine.mjs"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "2.16.0",
+    "@jax-js/jax": "0.1.27",
+    "@jax-js/onnx": "0.1.2",
+    "@jax-js/optax": "0.1.2",
+    "fflate": "0.8.2",
+    "onnx-buf": "1.20.0-1",
+    "onnxruntime-web": "1.30.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

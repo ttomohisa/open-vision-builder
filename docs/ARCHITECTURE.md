@@ -2,7 +2,7 @@
 
 更新日: 2026-10-24 JST
 
-状態: 承認済みの設計方針と、実装前に検証する技術候補を記載する。現在はドキュメントのみで、アプリの実装、学習・推論テスト、デプロイは未実施。
+状態: 製品全体の設計方針と、実装した P1a の境界を記載する。分類の凍結特徴 + ヘッド学習、完全 ONNX、ブラウザ/Python 一致をローカル検証済み。物体検出、保存・再開、実デプロイなどの状態は [STATUS](STATUS.md) と [実測記録](verification/2026-10-24-browser-classification.md) を参照する。
 
 ## 1. 責務とデータの境界
 
@@ -19,17 +19,23 @@ API 配備用のキットを提供する場合、そのサーバー、認証、�
 
 ## 2. フロントエンドと実行基盤の候補
 
-- フロントエンドは Vite + React + TypeScript を候補とする。依存関係は未導入。
+- フロントエンドは Vite + React + TypeScript を導入済み。正確な依存は package-lock.json に固定する。
 - 初期の学習対象環境はデスクトップの Chrome / Edge と WebGPU を候補とする。対応バージョン、GPU、メモリー要件は技術検証で決める。
-- メインスレッドは操作と描画を担当し、画像処理・学習・推論は専用 Worker に分離する設計を検証する。
+- メインスレッドは操作と描画を担当し、画像処理・学習・推論・ONNX 生成は専用 Worker で行う。job ID と Worker の破棄で中断後の応答を無効化し、入力変更で古い出力を破棄する。
 - 学習エンジンは未選定。最初の技術検証候補は jax-js。TensorFlow.js を採用する場合は、対応する detector の学習可能な演算、損失、optimizer、重み変換を明示的に実装・検証する。
-- ONNX Runtime Web は、生成した ONNX の推論検証に使う候補とする。学習エンジンとの一致を確認する。
+- P1a の分類は ONNX Runtime Web の単一スレッド WASM で固定特徴を抽出し、jax-js の自動微分と SGD で新しい分類ヘッドを更新する。完全 ONNX の独立推論にも ORT Web を使う。WebGPU は未認定で、成功実績を WASM から推定しない。
+
+P1a の画像入口は PNG / WebP に ImageDecoder の native pixel copy、opaque JPEG と不透明なYUV画像に createImageBitmap + Canvas を使用し、ICC変換なし・EXIF適用を揃える。固定画像のブラウザ/Python回帰を持つが、未検証codecの全pixel一致を保証しない。
+
+P1a は全画像を224×224へ half-pixel bilinear で伸縮し、ImageNet mean/std、FP32 NCHW を使う。元モデルの bicubic / center crop と異なる recipe で、上流ベンチマークを引き継ぐとはしない。1280次元の特徴を固定し、学習する W `[1280,C]` と b `[C]` を元の分類ヘッドと置換する。[ADR 0002](decisions/0002-classification-spike.md)
 
 WebGPU は安全なコンテキストを必要とし、Worker 内でも adapter / device の取得を確認する。API の存在だけで対応済みとは判定しない。[WorkerNavigator.gpu](https://developer.mozilla.org/en-US/docs/Web/API/WorkerNavigator/gpu)
 
 通常の Worker、WebGPU、WASM のマルチスレッドは別々に判定する。ONNX Runtime Web の WASM マルチスレッドは cross-origin isolation を必要とする。WebGPU 用 Worker は WASM proxy worker と分けて設計する。[ONNX Runtime の設定](https://onnxruntime.ai/docs/tutorials/web/env-flags-and-session-options.html)
 
 ## 3. ローカル保存・バックアップ・再開
+
+以下は製品化時の設計であり、P1a には未実装。現在はメモリ内の作業とモデル ZIP のダウンロードのみで、ページ終了後の復元はできない。
 
 | 保存先 | 内容 |
 | --- | --- |
@@ -106,7 +112,7 @@ Cloudflare の `_headers` で COOP / COEP を設定する案を検証する。�
 
 GitHub Pages の基本 base path は `/open-vision-builder/`。asset、Worker、WASM、モデル URL と Service Worker scope をこの subpath に対応させる。PR ごとの subpath を使う場合は build 時の base も追加調整する。
 
-信頼済みの同一リポジトリ PR を対象に、明示的な workflow で preview 用 subpath に公開する案を検証する。GitHub Pages の標準機能による自動 PR preview は前提にしない。現在 preview は未構成・未公開。[公式 deploy action](https://github.com/actions/deploy-pages)、[subpath preview の実装例](https://github.com/rossjrw/pr-preview-action)
+信頼済みの同一リポジトリ PR を対象に、明示的な workflow で preview 用 subpath に公開する案を検証する。GitHub Pages の標準機能による自動 PR preview は前提にしない。workflow は実装済みで、初回の Pages 設定と公開の確認手順は [DEPLOYMENT](DEPLOYMENT.md) に記録する。公開の成否は Actions と対象コミットの build-info.json で確認する。[公式 deploy action](https://github.com/actions/deploy-pages)、[subpath preview の実装例](https://github.com/rossjrw/pr-preview-action)
 
 GitHub Pages では custom header に依存せず、非隔離環境での実行経路を検証する。production と preview は origin を分け、preview はサンプルデータで確認する。パス名や IndexedDB 名の区別はセキュリティ境界にはならない。
 
@@ -114,4 +120,4 @@ GitHub Pages では custom header に依存せず、非隔離環境での実行�
 
 最初に「ブラウザー fine-tune → 完全な ONNX のローカル生成 → 新しい browser session → Python CPU」の一致を確認する。developer CI はブラウザー生成 fixture に `onnx.checker.check_model(..., full_check=True)` と実推論を実行する。ユーザーごとの export に Python や運営者の変換 endpoint を要求しない。[ONNX checker](https://onnx.ai/onnx/api/checker.html)
 
-構造検証に加え、クラス数の境界、空の検出、各種画像比率、前後処理、学習後の parameter 反映、移動後の artifact 読み込みを確認する。判定基準と実施記録は [VERIFICATION.md](VERIFICATION.md) に集約する。現時点でこれらの検証結果は存在しない。
+構造検証に加え、クラス数の境界、空の検出、各種画像比率、前後処理、学習後の parameter 反映、移動後の artifact 読み込みを確認する。判定基準と実施記録は [VERIFICATION.md](VERIFICATION.md) に集約する。分類の部分結果は [実測記録](verification/2026-10-24-browser-classification.md)、検出の演算不一致は [probe 記録](verification/2026-10-24-dfine-probe.md) にある。未実施の項目を合格としない。

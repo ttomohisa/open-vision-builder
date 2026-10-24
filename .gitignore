@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.venv/
+public/models/
+public/runtime/
+test-results/
+playwright-report/
+artifacts/
+.superpowers/
+__pycache__/
+*.pyc
