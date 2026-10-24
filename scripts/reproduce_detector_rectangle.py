@@ -18,6 +18,7 @@ import tempfile
 import numpy as np
 
 import prepare_detector as prepare
+import diagnose_detector_decoder as decoder
 from diagnose_detector_parity import metrics, session_options
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,13 +46,13 @@ def rectangle_input():
 
 
 def compare_tensor(actual, expected, name):
-    shape = prepare.OUTPUT_SHAPES.get(name, BOUNDARY_SHAPES.get(name))
+    shape = prepare.OUTPUT_SHAPES.get(name, BOUNDARY_SHAPES.get(name, decoder.SHAPES.get(name)))
     if shape is None:
         raise ValueError(f'Unknown comparison: {name}')
     for value in (actual, expected):
         if not isinstance(value, np.ndarray) or value.dtype != np.float32 or list(value.shape) != shape:
             raise ValueError(f'Wrong FP32 shape for {name}')
-    tolerance = prepare.TOLERANCES.get(name, {'atol': 2e-4, 'rtol': 1e-4})
+    tolerance = prepare.TOLERANCES.get(name, decoder.TOLERANCES.get(name, {'atol': 2e-4, 'rtol': 1e-4}))
     return {**metrics(actual, expected, **tolerance), **tolerance, 'shape': shape,
             'nativeSha256': prepare.tensor_sha256(expected), 'ortSha256': prepare.tensor_sha256(actual)}
 
@@ -82,6 +83,9 @@ def diagnose(assets, cache):
     wrapper, captures, handles = prepare.export_wrapper(base), {}, []
     modules = {'encoderProjection': base.model.enc_output[0], 'encoderNorm': base.model.enc_output[1],
                'encoderBox': base.model.enc_bbox_head}
+    decoder_layers = {f'layer{i}': layer for i, layer in enumerate(base.model.decoder.layers)}
+    decoder_mlps = {'preBox': base.model.decoder.pre_bbox_head,
+                    'corner0': base.bbox_embed[0], 'corner1': base.bbox_embed[1]}
 
     def hook(name):
         def record(_module, args, result):
@@ -93,7 +97,7 @@ def diagnose(assets, cache):
     try:
         for name, module in modules.items():
             handles.append(module.register_forward_hook(hook(name)))
-        with torch.inference_mode():
+        with decoder.capture_modules(decoder_mlps, decoder_layers, captures), torch.inference_mode():
             native = {name: value.cpu().numpy().copy() for name, value in
                       zip(prepare.OUTPUT_SHAPES, wrapper(torch.from_numpy(images)), strict=True)}
     finally:
@@ -135,10 +139,14 @@ def diagnose(assets, cache):
             'encoderProjection.output': normalization.input[0],
             'encoderNorm.input': normalization.input[0], 'encoderNorm.output': normalization.output[0],
             'encoderBox.input': mlp_first.input[0], 'encoderBox.output': mlp_last.output[0]}
+    decoder_taps = decoder.graph_taps(node)
+    taps.update(decoder_taps)
+    shapes = {**BOUNDARY_SHAPES, **decoder.SHAPES, **decoder.INTEGER_SHAPES}
     exposed = {value.name for value in instrumented.graph.output}
     for key, name in taps.items():
         if name not in exposed:
-            instrumented.graph.output.append(helper.make_tensor_value_info(name, TensorProto.FLOAT, BOUNDARY_SHAPES[key]))
+            dtype = TensorProto.INT64 if key in decoder.INTEGER_SHAPES else TensorProto.FLOAT
+            instrumented.graph.output.append(helper.make_tensor_value_info(name, dtype, shapes[key]))
             exposed.add(name)
     onnx.checker.check_model(instrumented, full_check=True)
     session = ort.InferenceSession(instrumented.SerializeToString(),
@@ -148,8 +156,8 @@ def diagnose(assets, cache):
     unchanged = {name: observed[name].dtype == actual[name].dtype and observed[name].shape == actual[name].shape
                  and observed[name].tobytes() == actual[name].tobytes() for name in list(prepare.OUTPUT_SHAPES)[2:]}
     if not all(unchanged.values()):
-        raise ValueError('Exposing encoder boundaries changed original prefix outputs')
-    traces = {key: compare_tensor(observed[name], captures[key], key) for key, name in taps.items()}
+        raise ValueError('Exposing boundaries changed original prefix outputs')
+    traces = {key: compare_tensor(observed[taps[key]], captures[key], key) for key in BOUNDARY_SHAPES}
     identical = {}
     with torch.inference_mode():
         for key, module in modules.items():
@@ -163,10 +171,12 @@ def diagnose(assets, cache):
         'scriptSha256': prepare.sha256_file(Path(__file__)), 'manifestSha256': prepare.sha256_file(manifest_path),
         'graphSha256': GRAPH_SHA256, 'comparisons': comparisons, 'encoderBoundaries': traces,
         'identicalOrtInput': identical, 'instrumentationBitIdentical': unchanged,
+        'decoder': decoder.report(decoder_mlps, decoder_layers, captures, observed, decoder_taps, compare_tensor),
+        'decoderScriptSha256': prepare.sha256_file(Path(decoder.__file__)),
         'environment': {'python': platform.python_version(), 'platform': platform.platform(),
             'packages': {name: importlib.metadata.version(name) for name in prepare.REQUIRED_VERSIONS},
             'provider': 'CPUExecutionProvider', 'threads': 1, 'ortOptimization': 'ORT_ENABLE_ALL'},
-        'scope': 'One known synthetic rectangle input; CPU forward and local encoder diagnosis only. No browser training, quality, new heldout evaluation or detector qualification.',
+        'scope': 'One known synthetic rectangle input; CPU forward and local encoder/decoder diagnosis only. No browser training, quality, new heldout evaluation or detector qualification.',
     }
 
 

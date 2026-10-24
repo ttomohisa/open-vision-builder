@@ -60,6 +60,8 @@ P1a は分類の固定バックボーン + ヘッド更新です。P1b の部分
 
 追加の `scripts/reproduce_detector_rectangle.py` は、既知の矩形1画像の CPU 診断です。終了0は測定完了であり、sourceParityPassed / 各出力の不一致と qualifiesDetector=false を保持します。新しい実行結果は [2026-10-25 の記録](docs/verification/2026-10-25-rectangle-reproduction.md)を参照し、失われた追加調査全体が復元済みとは扱いません。
 
+同じ診断は [decoder の各段と同一入力 replay](docs/verification/2026-10-25-decoder-localization.md)も記録します。`references` は固定 anchor、各 layer の `reference_points` は更新後の消費座標です。局所 replay の成功で元の G1 を合格に変更しません。
+
 ## PR とマージ
 
 - 作業ごとに専用ブランチを用い、`main` へ直接変更を push しない。

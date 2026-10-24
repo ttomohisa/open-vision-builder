@@ -178,6 +178,19 @@ jobs:
           passed = all(comparisons[name]['passedAtOriginalBound'] for name in names)
           if report['sourceParityPassed'] is not passed:
               raise SystemExit('Inconsistent rectangle parity result')
+          decoder = report['decoder']
+          stages = ('layer0', 'preBox', 'corner0', 'layer1', 'corner1', 'layer2')
+          boundary_names = {f'layer{i}.{key}' for i in range(3) for key in (
+              'hidden_states', 'position_embeddings', 'reference_points', 'encoder_hidden_states', 'output')}
+          boundary_names.update(f'{head}.{side}' for head in ('preBox', 'corner0', 'corner1') for side in ('input', 'output'))
+          if (set(decoder['boundaries']) != boundary_names or set(decoder['identicalOrtInput']) != set(stages)
+                  or decoder['spatialShapes'] != [[40, 40], [20, 20]]
+                  or type(decoder['queryOrder']['matchesConsumedEmbeddings']) is not bool
+                  or report['instrumentationBitIdentical'] != dict.fromkeys(names[2:], True)):
+              raise SystemExit('Incomplete decoder diagnostic')
+          for group in ('boundaries', 'identicalOrtInput'):
+              if any(type(value['passedAtOriginalBound']) is not bool for value in decoder[group].values()):
+                  raise SystemExit('Invalid decoder comparison result')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as handle:
               handle.write('## Known rectangle: diagnostic completed; source parity ' + ('PASS' if passed else 'FAIL') + '\n\n')
               handle.write('One known synthetic CPU input. This diagnostic does not qualify the detector, clear the original G1 gate, or establish browser/quality readiness.\n\n')
@@ -186,6 +199,17 @@ jobs:
                   row = comparisons[name]
                   label = 'PASS' if row['passedAtOriginalBound'] else 'FAIL'
                   handle.write(f'| {name} | {label} | {row["failedElements"]}/{row["elements"]} | {row["maxToleranceRatio"]:.6g} |\n')
+              handle.write('\n### Decoder observations and original-module replay\n\n')
+              handle.write('Own-input comparisons include upstream differences. Identical-ORT-input replay checks the local module on the observed operands; a local PASS does not clear source parity or establish quality.\n\n')
+              handle.write('| Stage output | Own-input result / failures | Identical ORT input result / failures |\n| --- | --- | --- |\n')
+              for name in stages:
+                  own = decoder['boundaries'][name + '.output']
+                  local = decoder['identicalOrtInput'][name]
+                  own_label = 'PASS' if own['passedAtOriginalBound'] else 'FAIL'
+                  local_label = 'PASS' if local['passedAtOriginalBound'] else 'FAIL'
+                  handle.write(f'| {name} | {own_label} / {own["failedElements"]} | {local_label} / {local["failedElements"]} |\n')
+              order = decoder['queryOrder']['matchesConsumedEmbeddings']
+              handle.write(f'\nORT indices reproduce native consumed embedding order: {order}. No query realignment.\n')
           PY
 
       - name: Compare the pretrained final head and all parameter updates to PyTorch

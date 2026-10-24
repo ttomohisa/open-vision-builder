@@ -1,0 +1,997 @@
+{
+  "sourceParityPassed": false,
+  "source": {
+    "modelId": "ustc-community/dfine-nano-coco",
+    "revision": "066438d3d8f0da137a37b38fdf3368fd4afceced",
+    "file": "model.safetensors",
+    "url": "https://huggingface.co/ustc-community/dfine-nano-coco/resolve/066438d3d8f0da137a37b38fdf3368fd4afceced/model.safetensors",
+    "sha256": "19e06bdc873da819920a8d373b879721a5b9759d822f8213220bb09abbdab58b",
+    "bytes": 15278996,
+    "license": "Apache-2.0",
+    "trainingDataset": "COCO-only",
+    "attentionConversionFix": "066438d merges c95fb3e from HF pull request #1; Transformers #40257 corrects Nano K slice to [128:256]."
+  },
+  "originalQualification": {
+    "passed": false,
+    "status": "unqualified-intermediate-parity-failure"
+  },
+  "fixture": {
+    "id": "rectangles",
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "dtype": "float32",
+    "sha256": "dad00b5c87bfc67d5b12f1212f2c88aeab24c6944998b2200f1e28ab9c0b42eb"
+  },
+  "scriptSha256": "dfae0d51f6fd769e8bb083dfb28a848cb87edb1d0da8745666a0e368f626cb9b",
+  "manifestSha256": "f8141b4362e96919996edbee70e65dfb08f1aedca48b10f9fe063bc39a1747bc",
+  "graphSha256": {
+    "detector.onnx": "4f282002c297af2835e038ea928e40cbcf56380321a914f85fd165e5aded8248",
+    "frozen-prefix.onnx": "71f3591bcd5f33b6e23d152816e7eea7f81296771625bc932bcf0ccd6a7bdcf3"
+  },
+  "comparisons": {
+    "logits": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 0.00020170211791992188,
+      "meanAbsoluteError": 1.1546974380811055e-05,
+      "maxToleranceRatio": 0.2660217745425841,
+      "failedElements": 0,
+      "differentElements": 23424,
+      "elements": 24000,
+      "referenceMinimum": -9.695555686950684,
+      "referenceMaximum": -0.48722171783447266,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        300,
+        80
+      ],
+      "nativeSha256": "ac9267a0c24fbe7a04f0b8993f35a5a502fd99b530e0b1fe59c7ae888e2b6b2d",
+      "ortSha256": "2113966890b53e29bb424884667d5378a2b471e002fcfb6c8fa9b7fec097b311"
+    },
+    "boxes": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 2.6047229766845703e-05,
+      "meanAbsoluteError": 5.375407636165618e-07,
+      "maxToleranceRatio": 0.39517898994818373,
+      "failedElements": 0,
+      "differentElements": 1025,
+      "elements": 1200,
+      "referenceMinimum": 0.004234731197357178,
+      "referenceMaximum": 0.9931919574737549,
+      "atol": 2e-05,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        300,
+        4
+      ],
+      "nativeSha256": "e43bb1e760a0a851a410cc689e3a5e1d0f906d6721679c0098531c6440885389",
+      "ortSha256": "f3ea741bcd5dbea036624dc94e362583900b0d30be4155e56e581db3ec93ab40"
+    },
+    "bboxInput": {
+      "passedAtOriginalBound": false,
+      "maxAbsoluteError": 0.0005629062652587891,
+      "meanAbsoluteError": 6.199775513474985e-06,
+      "maxToleranceRatio": 1.7030561503627848,
+      "failedElements": 7,
+      "differentElements": 38206,
+      "elements": 38400,
+      "referenceMinimum": -5.664101600646973,
+      "referenceMaximum": 4.060654163360596,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        300,
+        128
+      ],
+      "nativeSha256": "4b25764d644dd2e6ad110d4866a8869ce6fc81b393901d2fe662a6363d29e9e9",
+      "ortSha256": "fd2b4e653dbe457624f0083c307dce573a674f746823690b5c6a7bffbaaf7a97"
+    },
+    "classInput": {
+      "passedAtOriginalBound": false,
+      "maxAbsoluteError": 0.0005426406860351562,
+      "meanAbsoluteError": 3.694076508902929e-06,
+      "maxToleranceRatio": 1.5959521382738788,
+      "failedElements": 6,
+      "differentElements": 38243,
+      "elements": 38400,
+      "referenceMinimum": -4.565832614898682,
+      "referenceMaximum": 2.1516313552856445,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        300,
+        128
+      ],
+      "nativeSha256": "bc5f25b5eb7b6374babf022448e68c301abc88e59c107661026db6c96ebccc00",
+      "ortSha256": "65d28b54cb9106a7893be79bc99ef023247fe50f28950057eacd0e0c9bb90e75"
+    },
+    "residualCorners": {
+      "passedAtOriginalBound": false,
+      "maxAbsoluteError": 0.010969161987304688,
+      "meanAbsoluteError": 5.3739116334290517e-05,
+      "maxToleranceRatio": 11.272977638443187,
+      "failedElements": 245,
+      "differentElements": 39432,
+      "elements": 39600,
+      "referenceMinimum": -191.38095092773438,
+      "referenceMaximum": 94.10189056396484,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        300,
+        132
+      ],
+      "nativeSha256": "bb8a6fe641775881880185496cff98edb24add98450858921b7d3c730cfc426e",
+      "ortSha256": "3400da6e03c6b6b540dd4b6caae507735746b0b135a12883f9d5699cab15db18"
+    },
+    "references": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 1.609325408935547e-05,
+      "meanAbsoluteError": 4.5306747779250147e-07,
+      "maxToleranceRatio": 0.29252139567203483,
+      "failedElements": 0,
+      "differentElements": 1106,
+      "elements": 1200,
+      "referenceMinimum": 0.010322626680135727,
+      "referenceMaximum": 0.9914602041244507,
+      "atol": 2e-05,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        300,
+        4
+      ],
+      "nativeSha256": "1c2460463e9a7be6ba40cb599347749456ae22f245c923ecc7bc7d76922ebfe4",
+      "ortSha256": "878b0dd7c142bc6ec27064025c3c07bc2c2997d9df71362bb0b6d5304c5d2ac8"
+    }
+  },
+  "encoderBoundaries": {
+    "encoderProjection.input": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 4.279613494873047e-05,
+      "meanAbsoluteError": 5.041677339306383e-07,
+      "maxToleranceRatio": 0.1287151023867688,
+      "failedElements": 0,
+      "differentElements": 251724,
+      "elements": 256000,
+      "referenceMinimum": -0.27846455574035645,
+      "referenceMaximum": 4.2106170654296875,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        128
+      ],
+      "nativeSha256": "fbc46d40bd9522234a19463cbd8baca941685528b48a64c4dea4a8943084cb5f",
+      "ortSha256": "0986712b7552975d489e6a5e9c79e0e970facd07bcce6159032911e356fd38e9"
+    },
+    "encoderProjection.output": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 8.0108642578125e-05,
+      "meanAbsoluteError": 1.735761122290569e-06,
+      "maxToleranceRatio": 0.17289547586140017,
+      "failedElements": 0,
+      "differentElements": 252292,
+      "elements": 256000,
+      "referenceMinimum": -12.721647262573242,
+      "referenceMaximum": 17.332752227783203,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        128
+      ],
+      "nativeSha256": "0b7e1f5d624aba5e63863fa5322dc8c34759051a7f7f4f2e32532e234b83c083",
+      "ortSha256": "eb75897af2cbd24bb6e65323522d016591457803017b9e66ce6384d3738059e6"
+    },
+    "encoderNorm.input": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 8.0108642578125e-05,
+      "meanAbsoluteError": 1.735761122290569e-06,
+      "maxToleranceRatio": 0.17289547586140017,
+      "failedElements": 0,
+      "differentElements": 252292,
+      "elements": 256000,
+      "referenceMinimum": -12.721647262573242,
+      "referenceMaximum": 17.332752227783203,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        128
+      ],
+      "nativeSha256": "0b7e1f5d624aba5e63863fa5322dc8c34759051a7f7f4f2e32532e234b83c083",
+      "ortSha256": "eb75897af2cbd24bb6e65323522d016591457803017b9e66ce6384d3738059e6"
+    },
+    "encoderNorm.output": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 1.6868114471435547e-05,
+      "meanAbsoluteError": 5.923691210596438e-07,
+      "maxToleranceRatio": 0.07177940622997439,
+      "failedElements": 0,
+      "differentElements": 253227,
+      "elements": 256000,
+      "referenceMinimum": -3.2033708095550537,
+      "referenceMaximum": 1.9888468980789185,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        128
+      ],
+      "nativeSha256": "c408b9e874d97a104f04ef7567049643d293fb3b69f463d089452d8c618c49db",
+      "ortSha256": "a548efb015c693259cbfdfaba5e0c3fdbe59a82bfa3e5e128db27c5377143f64"
+    },
+    "encoderBox.input": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 1.6868114471435547e-05,
+      "meanAbsoluteError": 5.923691210596438e-07,
+      "maxToleranceRatio": 0.07177940622997439,
+      "failedElements": 0,
+      "differentElements": 253227,
+      "elements": 256000,
+      "referenceMinimum": -3.2033708095550537,
+      "referenceMaximum": 1.9888468980789185,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        128
+      ],
+      "nativeSha256": "c408b9e874d97a104f04ef7567049643d293fb3b69f463d089452d8c618c49db",
+      "ortSha256": "a548efb015c693259cbfdfaba5e0c3fdbe59a82bfa3e5e128db27c5377143f64"
+    },
+    "encoderBox.output": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 8.082389831542969e-05,
+      "meanAbsoluteError": 2.88718705996871e-06,
+      "maxToleranceRatio": 0.316019962772181,
+      "failedElements": 0,
+      "differentElements": 7896,
+      "elements": 8000,
+      "referenceMinimum": -3.1387927532196045,
+      "referenceMaximum": 4.043159484863281,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        4
+      ],
+      "nativeSha256": "f081d4525f65ef226d029f36a5c120f09455e403ab815b54a69377ddfb1cbfd0",
+      "ortSha256": "3454bc17e1d0cc0faeeef0da976c7dc31572d4286658edc7279a6285a36d5dae"
+    }
+  },
+  "identicalOrtInput": {
+    "encoderProjection": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 0.0,
+      "meanAbsoluteError": 0.0,
+      "maxToleranceRatio": 0.0,
+      "failedElements": 0,
+      "differentElements": 0,
+      "elements": 256000,
+      "referenceMinimum": -12.721646308898926,
+      "referenceMaximum": 17.332744598388672,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        128
+      ],
+      "nativeSha256": "eb75897af2cbd24bb6e65323522d016591457803017b9e66ce6384d3738059e6",
+      "ortSha256": "eb75897af2cbd24bb6e65323522d016591457803017b9e66ce6384d3738059e6"
+    },
+    "encoderNorm": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 9.5367431640625e-07,
+      "meanAbsoluteError": 2.5068766365876625e-08,
+      "maxToleranceRatio": 0.0028615709337649346,
+      "failedElements": 0,
+      "differentElements": 195057,
+      "elements": 256000,
+      "referenceMinimum": -3.203371286392212,
+      "referenceMaximum": 1.9888478517532349,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        128
+      ],
+      "nativeSha256": "d1ddc702acfa2b7eeb369fb1ecb13d98128de2aa899d93e9a4a7343d66d027e6",
+      "ortSha256": "a548efb015c693259cbfdfaba5e0c3fdbe59a82bfa3e5e128db27c5377143f64"
+    },
+    "encoderBox": {
+      "passedAtOriginalBound": true,
+      "maxAbsoluteError": 0.0,
+      "meanAbsoluteError": 0.0,
+      "maxToleranceRatio": 0.0,
+      "failedElements": 0,
+      "differentElements": 0,
+      "elements": 8000,
+      "referenceMinimum": -3.138792037963867,
+      "referenceMaximum": 4.043151378631592,
+      "atol": 0.0002,
+      "rtol": 0.0001,
+      "shape": [
+        1,
+        2000,
+        4
+      ],
+      "nativeSha256": "3454bc17e1d0cc0faeeef0da976c7dc31572d4286658edc7279a6285a36d5dae",
+      "ortSha256": "3454bc17e1d0cc0faeeef0da976c7dc31572d4286658edc7279a6285a36d5dae"
+    }
+  },
+  "instrumentationBitIdentical": {
+    "bboxInput": true,
+    "classInput": true,
+    "residualCorners": true,
+    "references": true
+  },
+  "decoder": {
+    "boundaries": {
+      "layer0.hidden_states": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 1.4066696166992188e-05,
+        "meanAbsoluteError": 3.7302977368961857e-07,
+        "maxToleranceRatio": 0.06018690993875624,
+        "failedElements": 0,
+        "differentElements": 37931,
+        "elements": 38400,
+        "referenceMinimum": -2.1910035610198975,
+        "referenceMaximum": 1.4895309209823608,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "9d461d80185250c266faff1e952a9e2b5af3fce6dd94e5fd012014cfaf3b3638",
+        "ortSha256": "eedbd1250c9d6928fea2329a0fe280eb973c32e8d63d6c32122d2d4581fd36d8"
+      },
+      "layer0.position_embeddings": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 6.747245788574219e-05,
+        "meanAbsoluteError": 6.55191889412284e-07,
+        "maxToleranceRatio": 0.14660139882599735,
+        "failedElements": 0,
+        "differentElements": 37187,
+        "elements": 38400,
+        "referenceMinimum": -2.9299392700195312,
+        "referenceMaximum": 6.187264442443848,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "0dea91435d09a7aa45e19e8837ae3b32d6035ec43b68b58924c9ca327214d8c1",
+        "ortSha256": "95935d2eac7d78024066125500478a3f4ea4f7bb52286d7ae5b907235ffeb0ec"
+      },
+      "layer0.reference_points": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 1.2159347534179688e-05,
+        "meanAbsoluteError": 3.729520055154959e-07,
+        "maxToleranceRatio": 0.19913595106066104,
+        "failedElements": 0,
+        "differentElements": 1113,
+        "elements": 1200,
+        "referenceMinimum": 0.012486212886869907,
+        "referenceMaximum": 0.9837244749069214,
+        "atol": 2e-05,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          1,
+          4
+        ],
+        "nativeSha256": "d28a3ace34e529e9563b88c030e14c57b77fa98f4e084e299c30c5ee0071530e",
+        "ortSha256": "49e600168fc3393e98d87cd6d76c75f2b377c8db0ac2002f881642281b253bb1"
+      },
+      "layer0.encoder_hidden_states": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 4.279613494873047e-05,
+        "meanAbsoluteError": 5.041677339306383e-07,
+        "maxToleranceRatio": 0.1287151023867688,
+        "failedElements": 0,
+        "differentElements": 251724,
+        "elements": 256000,
+        "referenceMinimum": -0.27846455574035645,
+        "referenceMaximum": 4.2106170654296875,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          2000,
+          128
+        ],
+        "nativeSha256": "fbc46d40bd9522234a19463cbd8baca941685528b48a64c4dea4a8943084cb5f",
+        "ortSha256": "0986712b7552975d489e6a5e9c79e0e970facd07bcce6159032911e356fd38e9"
+      },
+      "layer0.output": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 8.64267349243164e-05,
+        "meanAbsoluteError": 1.4124567595056685e-06,
+        "maxToleranceRatio": 0.343358829097501,
+        "failedElements": 0,
+        "differentElements": 38128,
+        "elements": 38400,
+        "referenceMinimum": -3.0827648639678955,
+        "referenceMaximum": 2.5847878456115723,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "778075216b79dad0c5c93de35ea9d71a2bcb10728b255a3935f4dc13f2d2ca8e",
+        "ortSha256": "1dccdd0bdf31a684707d9add98b6c4048350f08101a1176934ed2e1ffb6e8825"
+      },
+      "layer1.hidden_states": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 8.64267349243164e-05,
+        "meanAbsoluteError": 1.4124567595056685e-06,
+        "maxToleranceRatio": 0.343358829097501,
+        "failedElements": 0,
+        "differentElements": 38128,
+        "elements": 38400,
+        "referenceMinimum": -3.0827648639678955,
+        "referenceMaximum": 2.5847878456115723,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "778075216b79dad0c5c93de35ea9d71a2bcb10728b255a3935f4dc13f2d2ca8e",
+        "ortSha256": "1dccdd0bdf31a684707d9add98b6c4048350f08101a1176934ed2e1ffb6e8825"
+      },
+      "layer1.position_embeddings": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 8.237361907958984e-05,
+        "meanAbsoluteError": 9.169968802780204e-07,
+        "maxToleranceRatio": 0.2238898215831408,
+        "failedElements": 0,
+        "differentElements": 37053,
+        "elements": 38400,
+        "referenceMinimum": -2.9437525272369385,
+        "referenceMaximum": 6.197409629821777,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "22433d202026fbe5c34418d81f64d53dad1efca16952d054855b541d0143f710",
+        "ortSha256": "00418261d287474c0c9ccdaaf8903a6efec7fa34fac2220eb1ac70759f48fb46"
+      },
+      "layer1.reference_points": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 1.823902130126953e-05,
+        "meanAbsoluteError": 4.916513959566752e-07,
+        "maxToleranceRatio": 0.34027058436893914,
+        "failedElements": 0,
+        "differentElements": 1060,
+        "elements": 1200,
+        "referenceMinimum": 0.004174172878265381,
+        "referenceMaximum": 0.9932222366333008,
+        "atol": 2e-05,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          1,
+          4
+        ],
+        "nativeSha256": "4e11de0adfccde569dcf674f97d52dd54efcbc547e6e176b8089e80ffcc7600d",
+        "ortSha256": "eef915cfb8db05ac51a659bb46f6f7c120fe98e17b87fbafe067c4adcd68cae5"
+      },
+      "layer1.encoder_hidden_states": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 4.279613494873047e-05,
+        "meanAbsoluteError": 5.041677339306383e-07,
+        "maxToleranceRatio": 0.1287151023867688,
+        "failedElements": 0,
+        "differentElements": 251724,
+        "elements": 256000,
+        "referenceMinimum": -0.27846455574035645,
+        "referenceMaximum": 4.2106170654296875,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          2000,
+          128
+        ],
+        "nativeSha256": "fbc46d40bd9522234a19463cbd8baca941685528b48a64c4dea4a8943084cb5f",
+        "ortSha256": "0986712b7552975d489e6a5e9c79e0e970facd07bcce6159032911e356fd38e9"
+      },
+      "layer1.output": {
+        "passedAtOriginalBound": false,
+        "maxAbsoluteError": 0.000331193208694458,
+        "meanAbsoluteError": 4.151308387759419e-06,
+        "maxToleranceRatio": 1.3804004721508707,
+        "failedElements": 1,
+        "differentElements": 38185,
+        "elements": 38400,
+        "referenceMinimum": -3.879505157470703,
+        "referenceMaximum": 4.799495697021484,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "74a222c5939b4d4cd1a9ae02f0834abe206e415c13df19807d47a73671def7d2",
+        "ortSha256": "5bd389119e5a37afb014c1d416fa1713cb7051e23b3502d5eeb06edec4ec43ec"
+      },
+      "layer2.hidden_states": {
+        "passedAtOriginalBound": false,
+        "maxAbsoluteError": 0.000331193208694458,
+        "meanAbsoluteError": 4.151308387759419e-06,
+        "maxToleranceRatio": 1.3804004721508707,
+        "failedElements": 1,
+        "differentElements": 38185,
+        "elements": 38400,
+        "referenceMinimum": -3.879505157470703,
+        "referenceMaximum": 4.799495697021484,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "74a222c5939b4d4cd1a9ae02f0834abe206e415c13df19807d47a73671def7d2",
+        "ortSha256": "5bd389119e5a37afb014c1d416fa1713cb7051e23b3502d5eeb06edec4ec43ec"
+      },
+      "layer2.position_embeddings": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 9.131431579589844e-05,
+        "meanAbsoluteError": 1.0333740056012176e-06,
+        "maxToleranceRatio": 0.24867855430235483,
+        "failedElements": 0,
+        "differentElements": 36810,
+        "elements": 38400,
+        "referenceMinimum": -2.9428646564483643,
+        "referenceMaximum": 6.349286079406738,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "8a012fc02c12dcf7cb69f208899303bd18718681abb1550ce0fbba1485f5bfb1",
+        "ortSha256": "304b1b9e2f087692d227a4e8db09d4e1d8938113c17243b01da38ae52c6daf06"
+      },
+      "layer2.reference_points": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 2.9921531677246094e-05,
+        "meanAbsoluteError": 5.508866161108017e-07,
+        "maxToleranceRatio": 0.5294002731885961,
+        "failedElements": 0,
+        "differentElements": 1036,
+        "elements": 1200,
+        "referenceMinimum": 0.004286229610443115,
+        "referenceMaximum": 0.9931662082672119,
+        "atol": 2e-05,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          1,
+          4
+        ],
+        "nativeSha256": "a896b935d1a2740fbe2dde07f82a0a2c1d3f87772b4b97e62892bc540b857bed",
+        "ortSha256": "ff7a2a966b17628a99d199aec78f08904eb36e2da7d6f94f050fb33bd918d26b"
+      },
+      "layer2.encoder_hidden_states": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 4.279613494873047e-05,
+        "meanAbsoluteError": 5.041677339306383e-07,
+        "maxToleranceRatio": 0.1287151023867688,
+        "failedElements": 0,
+        "differentElements": 251724,
+        "elements": 256000,
+        "referenceMinimum": -0.27846455574035645,
+        "referenceMaximum": 4.2106170654296875,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          2000,
+          128
+        ],
+        "nativeSha256": "fbc46d40bd9522234a19463cbd8baca941685528b48a64c4dea4a8943084cb5f",
+        "ortSha256": "0986712b7552975d489e6a5e9c79e0e970facd07bcce6159032911e356fd38e9"
+      },
+      "layer2.output": {
+        "passedAtOriginalBound": false,
+        "maxAbsoluteError": 0.0005426406860351562,
+        "meanAbsoluteError": 3.694076508902929e-06,
+        "maxToleranceRatio": 1.5959521382738788,
+        "failedElements": 6,
+        "differentElements": 38243,
+        "elements": 38400,
+        "referenceMinimum": -4.565832614898682,
+        "referenceMaximum": 2.1516313552856445,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "bc5f25b5eb7b6374babf022448e68c301abc88e59c107661026db6c96ebccc00",
+        "ortSha256": "65d28b54cb9106a7893be79bc99ef023247fe50f28950057eacd0e0c9bb90e75"
+      },
+      "preBox.input": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 8.64267349243164e-05,
+        "meanAbsoluteError": 1.4124567595056685e-06,
+        "maxToleranceRatio": 0.343358829097501,
+        "failedElements": 0,
+        "differentElements": 38128,
+        "elements": 38400,
+        "referenceMinimum": -3.0827648639678955,
+        "referenceMaximum": 2.5847878456115723,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "778075216b79dad0c5c93de35ea9d71a2bcb10728b255a3935f4dc13f2d2ca8e",
+        "ortSha256": "1dccdd0bdf31a684707d9add98b6c4048350f08101a1176934ed2e1ffb6e8825"
+      },
+      "preBox.output": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 8.568167686462402e-05,
+        "meanAbsoluteError": 1.9011449573251108e-06,
+        "maxToleranceRatio": 0.36201056360675443,
+        "failedElements": 0,
+        "differentElements": 1196,
+        "elements": 1200,
+        "referenceMinimum": -1.339195728302002,
+        "referenceMaximum": 1.2542939186096191,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          4
+        ],
+        "nativeSha256": "8ff76d2c4d3a70c2e93f9086e6cca8c43a427d0bfd4bfc20e3bca6044a872a88",
+        "ortSha256": "c1f7341bfc8551d0780327144d5d842b74af8b821ffde0b7ca577fb99dd4030a"
+      },
+      "corner0.input": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 8.64267349243164e-05,
+        "meanAbsoluteError": 1.4124567595056685e-06,
+        "maxToleranceRatio": 0.343358829097501,
+        "failedElements": 0,
+        "differentElements": 38128,
+        "elements": 38400,
+        "referenceMinimum": -3.0827648639678955,
+        "referenceMaximum": 2.5847878456115723,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "778075216b79dad0c5c93de35ea9d71a2bcb10728b255a3935f4dc13f2d2ca8e",
+        "ortSha256": "1dccdd0bdf31a684707d9add98b6c4048350f08101a1176934ed2e1ffb6e8825"
+      },
+      "corner0.output": {
+        "passedAtOriginalBound": false,
+        "maxAbsoluteError": 0.010264396667480469,
+        "meanAbsoluteError": 4.602416590175996e-05,
+        "maxToleranceRatio": 8.471544158432149,
+        "failedElements": 130,
+        "differentElements": 39375,
+        "elements": 39600,
+        "referenceMinimum": -192.5177764892578,
+        "referenceMaximum": 87.90250396728516,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          132
+        ],
+        "nativeSha256": "afa393fd4ad3a7d93a3c0803dec252c371723c32a4ef864d24221fff31a9d1df",
+        "ortSha256": "87d812daa12a9bf40b90e6247c30935616671547bb80ae1d118f8ada225e2be2"
+      },
+      "corner1.input": {
+        "passedAtOriginalBound": false,
+        "maxAbsoluteError": 0.0003693103790283203,
+        "meanAbsoluteError": 4.562061049000476e-06,
+        "maxToleranceRatio": 1.2659734700283043,
+        "failedElements": 1,
+        "differentElements": 38146,
+        "elements": 38400,
+        "referenceMinimum": -4.673915386199951,
+        "referenceMaximum": 6.5240254402160645,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "7147df9b4e9469d5af95926912ae2e58e258142d4385f459ca025f59945a6733",
+        "ortSha256": "162130b6dd9e874fa904a376b5d0bee5360950b0917095aac72d3192015da075"
+      },
+      "corner1.output": {
+        "passedAtOriginalBound": false,
+        "maxAbsoluteError": 0.0007566213607788086,
+        "meanAbsoluteError": 1.6650009848591355e-05,
+        "maxToleranceRatio": 3.0235670875299063,
+        "failedElements": 196,
+        "differentElements": 39510,
+        "elements": 39600,
+        "referenceMinimum": -11.441394805908203,
+        "referenceMaximum": 10.977338790893555,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          132
+        ],
+        "nativeSha256": "e66fb71808ba97531a76fc7147b6fc1f47a62b05ad09177653f486de67c41ce3",
+        "ortSha256": "88be1e5bfc4caa20cb7f2246e06392436ac50f1961a54c3582d0a1eff1d0efa4"
+      }
+    },
+    "identicalOrtInput": {
+      "layer0": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 1.430511474609375e-06,
+        "meanAbsoluteError": 9.491895897421424e-08,
+        "maxToleranceRatio": 0.006640994362762068,
+        "failedElements": 0,
+        "differentElements": 35944,
+        "elements": 38400,
+        "referenceMinimum": -3.082764148712158,
+        "referenceMaximum": 2.5847866535186768,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "481083d1e02f8e14374670a5b5be3acb005a01a9e81663ab79a522e06957defc",
+        "ortSha256": "1dccdd0bdf31a684707d9add98b6c4048350f08101a1176934ed2e1ffb6e8825"
+      },
+      "layer1": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 5.841255187988281e-06,
+        "meanAbsoluteError": 1.6132734027488973e-07,
+        "maxToleranceRatio": 0.026461675287178597,
+        "failedElements": 0,
+        "differentElements": 36012,
+        "elements": 38400,
+        "referenceMinimum": -3.879523277282715,
+        "referenceMaximum": 4.799495697021484,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "54b90f45b9b74389a851b6f9379c6a603d8adf46dddd14bea12b4fe74c140ad2",
+        "ortSha256": "5bd389119e5a37afb014c1d416fa1713cb7051e23b3502d5eeb06edec4ec43ec"
+      },
+      "layer2": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 4.172325134277344e-06,
+        "meanAbsoluteError": 1.0348385012311686e-07,
+        "maxToleranceRatio": 0.0155786367342709,
+        "failedElements": 0,
+        "differentElements": 35645,
+        "elements": 38400,
+        "referenceMinimum": -4.566007614135742,
+        "referenceMaximum": 2.1516082286834717,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          128
+        ],
+        "nativeSha256": "7d508cf1bd66ad607fddc798494af3714b2ad8b87ba148eaa2761f5f677bd7db",
+        "ortSha256": "65d28b54cb9106a7893be79bc99ef023247fe50f28950057eacd0e0c9bb90e75"
+      },
+      "preBox": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 0.0,
+        "meanAbsoluteError": 0.0,
+        "maxToleranceRatio": 0.0,
+        "failedElements": 0,
+        "differentElements": 0,
+        "elements": 1200,
+        "referenceMinimum": -1.3392014503479004,
+        "referenceMaximum": 1.2543193101882935,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          4
+        ],
+        "nativeSha256": "c1f7341bfc8551d0780327144d5d842b74af8b821ffde0b7ca577fb99dd4030a",
+        "ortSha256": "c1f7341bfc8551d0780327144d5d842b74af8b821ffde0b7ca577fb99dd4030a"
+      },
+      "corner0": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 0.0,
+        "meanAbsoluteError": 0.0,
+        "maxToleranceRatio": 0.0,
+        "failedElements": 0,
+        "differentElements": 0,
+        "elements": 39600,
+        "referenceMinimum": -192.51840209960938,
+        "referenceMaximum": 87.9028549194336,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          132
+        ],
+        "nativeSha256": "87d812daa12a9bf40b90e6247c30935616671547bb80ae1d118f8ada225e2be2",
+        "ortSha256": "87d812daa12a9bf40b90e6247c30935616671547bb80ae1d118f8ada225e2be2"
+      },
+      "corner1": {
+        "passedAtOriginalBound": true,
+        "maxAbsoluteError": 0.0,
+        "meanAbsoluteError": 0.0,
+        "maxToleranceRatio": 0.0,
+        "failedElements": 0,
+        "differentElements": 0,
+        "elements": 39600,
+        "referenceMinimum": -11.441397666931152,
+        "referenceMaximum": 10.977364540100098,
+        "atol": 0.0002,
+        "rtol": 0.0001,
+        "shape": [
+          1,
+          300,
+          132
+        ],
+        "nativeSha256": "88be1e5bfc4caa20cb7f2246e06392436ac50f1961a54c3582d0a1eff1d0efa4",
+        "ortSha256": "88be1e5bfc4caa20cb7f2246e06392436ac50f1961a54c3582d0a1eff1d0efa4"
+      }
+    },
+    "replayInputSha256": {
+      "layer0": {
+        "hidden_states": "eedbd1250c9d6928fea2329a0fe280eb973c32e8d63d6c32122d2d4581fd36d8",
+        "position_embeddings": "95935d2eac7d78024066125500478a3f4ea4f7bb52286d7ae5b907235ffeb0ec",
+        "reference_points": "49e600168fc3393e98d87cd6d76c75f2b377c8db0ac2002f881642281b253bb1",
+        "encoder_hidden_states": "0986712b7552975d489e6a5e9c79e0e970facd07bcce6159032911e356fd38e9"
+      },
+      "layer1": {
+        "hidden_states": "1dccdd0bdf31a684707d9add98b6c4048350f08101a1176934ed2e1ffb6e8825",
+        "position_embeddings": "00418261d287474c0c9ccdaaf8903a6efec7fa34fac2220eb1ac70759f48fb46",
+        "reference_points": "eef915cfb8db05ac51a659bb46f6f7c120fe98e17b87fbafe067c4adcd68cae5",
+        "encoder_hidden_states": "0986712b7552975d489e6a5e9c79e0e970facd07bcce6159032911e356fd38e9"
+      },
+      "layer2": {
+        "hidden_states": "5bd389119e5a37afb014c1d416fa1713cb7051e23b3502d5eeb06edec4ec43ec",
+        "position_embeddings": "304b1b9e2f087692d227a4e8db09d4e1d8938113c17243b01da38ae52c6daf06",
+        "reference_points": "ff7a2a966b17628a99d199aec78f08904eb36e2da7d6f94f050fb33bd918d26b",
+        "encoder_hidden_states": "0986712b7552975d489e6a5e9c79e0e970facd07bcce6159032911e356fd38e9"
+      },
+      "preBox": {
+        "input": "1dccdd0bdf31a684707d9add98b6c4048350f08101a1176934ed2e1ffb6e8825"
+      },
+      "corner0": {
+        "input": "1dccdd0bdf31a684707d9add98b6c4048350f08101a1176934ed2e1ffb6e8825"
+      },
+      "corner1": {
+        "input": "162130b6dd9e874fa904a376b5d0bee5360950b0917095aac72d3192015da075"
+      }
+    },
+    "spatialShapes": [
+      [
+        40,
+        40
+      ],
+      [
+        20,
+        20
+      ]
+    ],
+    "taps": {
+      "layer0.hidden_states": "/base/model/GatherElements_1_output_0",
+      "layer0.position_embeddings": "/base/model/decoder/Clip_output_0",
+      "layer0.reference_points": "/base/model/decoder/Unsqueeze_output_0",
+      "layer0.encoder_hidden_states": "/base/model/Concat_2_output_0",
+      "layer0.output": "/base/model/decoder/layers.0/final_layer_norm/LayerNormalization_output_0",
+      "layer1.hidden_states": "/base/model/decoder/layers.0/final_layer_norm/LayerNormalization_output_0",
+      "layer1.position_embeddings": "/base/model/decoder/Clip_4_output_0",
+      "layer1.reference_points": "/base/model/decoder/Unsqueeze_9_output_0",
+      "layer1.encoder_hidden_states": "/base/model/Concat_2_output_0",
+      "layer1.output": "/base/model/decoder/layers.1/final_layer_norm/LayerNormalization_output_0",
+      "layer2.hidden_states": "/base/model/decoder/layers.1/final_layer_norm/LayerNormalization_output_0",
+      "layer2.position_embeddings": "/base/model/decoder/Clip_5_output_0",
+      "layer2.reference_points": "/base/model/decoder/Unsqueeze_18_output_0",
+      "layer2.encoder_hidden_states": "/base/model/Concat_2_output_0",
+      "layer2.output": "classInput",
+      "preBox.input": "/base/model/decoder/layers.0/final_layer_norm/LayerNormalization_output_0",
+      "preBox.output": "/base/model/decoder/pre_bbox_head/layers.2/Add_output_0",
+      "corner0.input": "/base/model/decoder/layers.0/final_layer_norm/LayerNormalization_output_0",
+      "corner0.output": "/base/model/decoder/bbox_embed.0/layers.2/Add_output_0",
+      "corner1.input": "/base/model/decoder/Add_25_output_0",
+      "corner1.output": "/base/model/decoder/bbox_embed.1/layers.2/Add_output_0",
+      "queryIndices": "/base/model/TopK_output_1",
+      "spatial0": "/base/model/Gather_output_0",
+      "spatial1": "/base/model/Gather_1_output_0",
+      "spatial2": "/base/model/Gather_2_output_0",
+      "spatial3": "/base/model/Gather_3_output_0"
+    },
+    "queryOrder": {
+      "matchesConsumedEmbeddings": true,
+      "indicesSha256": "199ad0be0ba62c28a07beb433fc15551d78acb68d170943fad301801b91a8970",
+      "uniqueIndices": 300,
+      "scope": "ORT indices gather the actual native consumed embeddings in order. Duplicate identical encoder rows can make native index identity ambiguous. No query realignment."
+    },
+    "referenceMeaning": "Per-layer reference_points are the refined coordinates actually consumed. The existing references export is the fixed pre-bbox anchor after layer 0.",
+    "scope": "Known rectangle, original FP32 module replay on identical ORT operands. Numerical observations only; no detector qualification or quality claim."
+  },
+  "decoderScriptSha256": "7f3ede0c30767cfe3ddee3d957aea9a3a9046ecd6f679037f454ec5be0a60ab1",
+  "environment": {
+    "python": "3.12.14",
+    "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+    "packages": {
+      "torch": "2.6.0+cpu",
+      "torchvision": "0.21.0+cpu",
+      "transformers": "4.56.0",
+      "onnx": "1.17.0",
+      "onnxruntime": "1.20.1",
+      "numpy": "2.2.3",
+      "safetensors": "0.5.3",
+      "Pillow": "11.1.0",
+      "protobuf": "7.36.2",
+      "huggingface-hub": "0.34.4",
+      "tokenizers": "0.22.0"
+    },
+    "provider": "CPUExecutionProvider",
+    "threads": 1,
+    "ortOptimization": "ORT_ENABLE_ALL"
+  },
+  "scope": "One known synthetic rectangle input; CPU forward and local encoder/decoder diagnosis only. No browser training, quality, new heldout evaluation or detector qualification.",
+  "schemaVersion": 1,
+  "kind": "dfine-rectangle-diagnostic-v1",
+  "qualifiesDetector": false,
+  "status": "completed"
+}
