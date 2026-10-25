@@ -259,6 +259,11 @@ jobs:
       - name: Install Chromium and its system dependencies
         run: npx playwright install --with-deps chromium
 
+      - name: Prepare the pinned public images and check the bounded impact harness
+        run: |
+          artifacts/p1b/.venv-detector/bin/python scripts/prepare_detector_impact_data.py
+          node scripts/run_detector_impact.mjs --check
+
       - name: Verify the browser training and full ONNX export
         run: npm run test:browser
 
@@ -341,6 +346,7 @@ jobs:
             artifacts/p1b/browser/
             artifacts/p1b/training/pretrained-js-verification.json
             artifacts/p1c/rectangle-reproduction.json
+            artifacts/p1d/data/prepared.json
             artifacts/p1b/detector-assets/prepared/model.json
             artifacts/p1b/detector-assets/prepared/preparation.json
             artifacts/p1b/detector-assets/prepared/inventory.json

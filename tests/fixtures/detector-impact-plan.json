@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "dfine-coco-own-prefix-impact-v1",
+  "datasetManifestSha256": "464570f5138ddfdd159892a9e3a9a4723d45ee335de1bc93965bc93fc6b289a6",
+  "sourceCheckpointSha256": "19e06bdc873da819920a8d373b879721a5b9759d822f8213220bb09abbdab58b",
+  "recipe": {
+    "classes": 80,
+    "trainable": "final-pretrained-bbox-and-class-heads",
+    "frozen": "prefix-and-LQE",
+    "loss": "VFL + 5 * L1 + 2 * GIoU",
+    "optimizer": "SGD",
+    "learningRate": 0.0001,
+    "momentum": 0,
+    "weightDecay": 0,
+    "epochs": 3,
+    "steps": 12,
+    "order": "manifest-train-order-repeated",
+    "randomness": "none; eval prefix; no augmentation or shuffle"
+  },
+  "splits": {"train": 4, "tuning": 2, "evaluation": 4},
+  "controls": {"checkpoints": [0, 6, 12], "image": "first-training-image", "tolerances": "detector-training-tolerances.json"},
+  "metrics": {"scoreThreshold": 0.05, "maxDetections": 100, "iouThreshold": 0.5, "recallPoints": 101, "nms": false},
+  "criteria": {
+    "minimumTrainLossReduction": 0.01,
+    "maximumOwnLossRelativeGap": 0.01,
+    "maximumEvaluationAp50Gap": 0.01,
+    "maximumEvaluationAp50Drop": 0.02,
+    "exportLogits": {"atol": 0.0002, "rtol": 0.0001},
+    "exportBoxes": {"atol": 0.00002, "rtol": 0.0001}
+  },
+  "budget": {"completedExperiments": 1, "activeWorkMinutes": 90, "runtimeMinutes": 15, "automaticRetries": 0},
+  "stopOn": ["nonfinite", "corrupt-weights-or-inputs", "same-feature-control-failure", "runtime-budget"],
+  "detectorQualification": "FAIL",
+  "releaseReady": false
+}

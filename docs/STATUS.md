@@ -6,7 +6,7 @@
 
 **P1a の分類はマージ済み。P1b は検出の最終ヘッド学習・完全 ONNX の基礎検証まで進行。検出の中間特徴量一致は FAIL、P1 全体と初期版は未完了です。**
 
-合意・検証方針は [PR #1](https://github.com/ttomohisa/open-vision-builder/pull/1) と [PR #2](https://github.com/ttomohisa/open-vision-builder/pull/2) で記録しました。[分類の PR #3](https://github.com/ttomohisa/open-vision-builder/pull/3) は 2026-10-24 04:50 UTC にマージされました。[検出基礎検証の PR #4](https://github.com/ttomohisa/open-vision-builder/pull/4) も 2026-10-24 09:47 UTC（18:47 JST）にマージ済みです。今回の比較元は `4549114d40491f16bba75da5742f7c3d3b4e1e77`、ブランチは `docs/dfine-investigation-checkpoint` です。以後のマージ状況は [PR 一覧](https://github.com/ttomohisa/open-vision-builder/pulls)を確認します。
+合意・検証方針は [PR #1](https://github.com/ttomohisa/open-vision-builder/pull/1) と [PR #2](https://github.com/ttomohisa/open-vision-builder/pull/2) で記録しました。[分類の PR #3](https://github.com/ttomohisa/open-vision-builder/pull/3)、[検出基礎検証の PR #4](https://github.com/ttomohisa/open-vision-builder/pull/4)、[再現・局所診断の PR #5](https://github.com/ttomohisa/open-vision-builder/pull/5) はマージ済みです。PR #5 のマージは 2026-10-25 00:13 UTC（09:13 JST）、比較元は `f73cdb9407f60fb402e23afa9abdefdd7e98e058`、今回のブランチは `test/dfine-own-prefix-impact` です。以後のマージ状況は [PR 一覧](https://github.com/ttomohisa/open-vision-builder/pulls)を確認します。
 
 ## PR #4 後の作業と復元範囲
 
@@ -21,6 +21,12 @@ PR #5 の初回コミットは文書のみでした。その後、[矩形1画像
 ユーザーの指示に基づく[方針点検](decisions/0005-bound-numerical-investigation.md)で、数値調査の自動延長を止めました。PR #5 は現在の再現・局所診断で区切り、予定していた decoder 全体 replay は保留します。次は学習・出力への影響を優先し、分類の実データ品質確認も独立して進める方針です。今回の点検で新しい学習・精度実験を実行したものではありません。
 
 ## 実装・検証の状態
+
+### 次の限定比較の事前登録
+
+[実行計画](superpowers/plans/2026-10-25-dfine-own-prefix-impact.md)と[公開実画像の記録](verification/2026-10-25-impact-data.md)を用意しました。4 train / 2 tuning / 4 evaluation、全58注釈、同一の12 SGD step、0/6/12 step の同一特徴対照、fresh browser context と Python の完全 ONNX 検証です。データ manifest と計画の hash を結び付け、条件を変えた開始を拒否します。この段階では新しい学習実験は NOT RUN です。
+
+評価画像は今回の追加学習に未使用という意味で、元 COCO checkpoint のモデル選定との独立は保証しません。画像単位の小規模比較であり、G4 全体や実用精度を認定しません。CI はデータ再現・単体テスト・ブラウザ起動の事前確認を行い、毎回の追加学習実験は自動実行しません。
 
 | 項目 | 確認できた範囲 / 残課題 |
 | --- | --- |

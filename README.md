@@ -92,6 +92,18 @@ npm run test:browser
 
 `dist/` は静的配信できます。GitHub Pages 用 CI・公開 workflow と Cloudflare 用の設定は [DEPLOYMENT](docs/DEPLOYMENT.md) を参照してください。Pages の初回設定と実際の公開確認は別工程です。公開確認前の URL はプレビューとして案内しません。
 
+### 公開実画像での限定した学習影響比較（開発者用）
+
+[事前登録した計画](docs/superpowers/plans/2026-10-25-dfine-own-prefix-impact.md)に従い、各 runtime 自身の frozen-prefix 特徴を使う12 step の比較を行うコードを用意しています。[画像・注釈・分割・利用条件](docs/verification/2026-10-25-impact-data.md)を固定し、同じ特徴・重みの対照が失敗した場合は停止します。
+
+```bash
+artifacts/p1b/.venv-detector/bin/python scripts/prepare_detector_impact_data.py
+node scripts/run_detector_impact.mjs --check
+node scripts/run_detector_impact.mjs
+```
+
+`--check` は固定ファイルと Chromium 内の module 読込までの事前確認です。推論・学習は行いません。引数なしの実験は最大15分で、既存の出力先 `artifacts/p1d/run/` を上書きしません。`status.json`、途中対照、全勾配・更新、比較、完全 ONNX を保存します。数値条件外の結果も保存し、構造・hash・実行エラーは非0終了します。実測の有無と結果は [STATUS](docs/STATUS.md)を確認してください。これらの開発用モデル・画像を Pages に公開したり、元の G1 FAIL を変更したりする処理ではありません。
+
 ## 製品として守る方針
 
 - Cloudflare の静的ホスティング、運営側の API・DB・学習サーバーなし。
