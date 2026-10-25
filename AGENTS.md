@@ -65,6 +65,10 @@ P1a は分類の固定バックボーン + ヘッド更新です。P1b の部分
 
 2026-10-25 の方針点検で、予定していた decoder 全体の同一入口 replay は保留しました。PR #5 は保存済み診断の範囲で区切り、次は各実行系自身の特徴を使う学習・出力への影響を優先します。詳細は [ADR 0005](docs/decisions/0005-bound-numerical-investigation.md)。
 
+その後、[PR #6 の実画像比較](docs/verification/2026-10-25-own-prefix-impact.md)を一回完了しました。同一特徴対照は通りましたが、両実装の学習改善が1%基準に届かず、Python export は2画像で不一致でした。条件未達を保持してこの実験は終了です。次は分類の実画像品質を独立して進めます。検出の追加試験や数値調査を自動的に継続せず、STATUS の次作業と ADR 0005 に従ってください。
+
+`prepare_detector_impact_data.py` は固定公開画像の再現、`node scripts/run_detector_impact.mjs --check` は推論しない事前確認です。引数なしは既に完了した12 step実験を実行するため、単体テストの代わりに毎回起動しません。画像・大きな raw tensor・モデルは ignored artifacts、比較集計と評価検出結果は上記記録に保存します。
+
 ## PR とマージ
 
 - 作業ごとに専用ブランチを用い、`main` へ直接変更を push しない。

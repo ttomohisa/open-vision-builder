@@ -19,6 +19,8 @@ A browser-based vision model builder for image classification and object detecti
 
 公開画面の学習は現在 **WASM / CPU、分類ヘッドのみ**です。開発用の検出試験では、COCO 学習済み D-FINE Nano の最終 bbox / class ヘッドを実更新し、完全 ONNX をブラウザと Python で照合しています。ただし、元実装と frozen prefix の中間特徴量の一致ゲートは **FAIL** です。検出モデルを画面から選択したり、Pages のモデルとして公開したりする段階にはしていません。
 
+その後の[公開実画像10枚・12 stepの比較](docs/verification/2026-10-25-own-prefix-impact.md)でも、両実装の損失改善は事前条件に届きませんでした。完全 ONNX の fresh browser 一致は10/10画像、Python CPU 一致は8/10画像で、2画像の不一致を保持しています。検出器の製品採用を認定する結果ではありません。
+
 独自クラスの検出、WebGPU、バックボーンの Fine-tuning、実データでの品質、ピークメモリ、保存・再開は未対応または未検証です。生成サンプルの正解率は実画像の品質を示しません。ページを閉じると作業中のデータは失われるため、必要なモデルは先にダウンロードしてください。
 
 [分類の実測](docs/verification/2026-10-24-browser-classification.md)・[検出の部分結果と未解決ゲート](docs/verification/2026-10-24-dfine-foundation.md)・[現在の状態](docs/STATUS.md)に、確認した範囲と残課題を記録しています。
