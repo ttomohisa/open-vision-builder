@@ -128,7 +128,9 @@ function inspectZip(bytes: Uint8Array, options: {
 
 export async function sha256Hex(data: Blob | Uint8Array): Promise<string> {
   const input = data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : data;
-  const digest = await crypto.subtle.digest('SHA-256', input);
+  const copy = new Uint8Array(input.byteLength);
+  copy.set(input);
+  const digest = await crypto.subtle.digest('SHA-256', copy.buffer);
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
