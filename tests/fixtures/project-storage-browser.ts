@@ -61,3 +61,33 @@ export async function corruptObjectAndLoad() {
     return { removed, error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+
+export async function repairSameSizeCorruption() {
+  await clearProject();
+  const original = snapshot();
+  await saveProject(original);
+  const root = await navigator.storage.getDirectory();
+  const projects = await root.getDirectoryHandle('projects');
+  const project = await projects.getDirectoryHandle('classification-default');
+  const objects = await project.getDirectoryHandle('objects');
+  let corrupted = '';
+  for await (const [name, handle] of objects.entries()) {
+    if (handle.kind !== 'file') continue;
+    const fileHandle = await objects.getFileHandle(name);
+    const file = await fileHandle.getFile();
+    if (file.size !== original.samples[0].file.size) continue;
+    const writable = await fileHandle.createWritable();
+    await writable.write(new Uint8Array(file.size).fill(255));
+    await writable.close();
+    corrupted = name;
+    break;
+  }
+  if (!corrupted) throw new Error('No matching object was found to corrupt');
+  await saveProject(snapshot());
+  const loaded = await loadProject();
+  return {
+    corrupted,
+    samples: await sampleBytes(loaded),
+  };
+}
