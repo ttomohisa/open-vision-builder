@@ -36,6 +36,7 @@
 - 出力した ONNX を読み直し、ブラウザ内の最終モデルと Python の ONNX Runtime で結果を比較する。
 - 精度・速度・メモリについて未測定の数値を書かない。上流のベンチマークには評価条件と出典を付ける。
 - 合格条件を実行前に決め、失敗後に結果へ合わせて変更しない。条件の見直しには理由を記録する。
+- 数値調査の追加は [ADR 0005](docs/decisions/0005-bound-numerical-investigation.md) に従い、問い・結果別の実装判断・実行予算・打切り条件を先に記録する。「さらに分解する」を自動的な次の作業にしない。
 - 対応モデルの検証が失敗しても、ONNX 必須やブラウザ学習などの製品要件を黙って緩めない。[VERIFICATION](docs/VERIFICATION.md) に沿って原因と次の選択肢を記録する。
 - ユーザーのデータ、認証情報、巨大なモデルのバイナリをリポジトリへ混入させない。参照用データは出典・利用条件を確認する。
 - 実際に存在するビルドコマンドと、実行した確認を記載する。アプリ未実装の段階では文書の確認を行い、存在しないコマンドや成功していないテストを README・PR に記載しない。
@@ -58,9 +59,17 @@
 
 P1a は分類の固定バックボーン + ヘッド更新です。P1b の部分成功は既存80クラスの最終 pretrained bbox/class ヘッドに限り、前段・LQE は固定です。中間特徴の G1 FAIL、独自クラス、全体 fine-tuning・実用精度・WebGPU・メモリ・保存再開は [STATUS](docs/STATUS.md) の残課題を引き継ぎます。検出の調査用モデルは `public/` / `dist/` に入れず、製品画面へ接続しません。モデルバイナリ・ユーザーデータ・生成 fixture の大きな tensor を git に含めません。
 
+追加の `scripts/reproduce_detector_rectangle.py` は、既知の矩形1画像の CPU 診断です。終了0は測定完了であり、sourceParityPassed / 各出力の不一致と qualifiesDetector=false を保持します。新しい実行結果は [2026-10-25 の記録](docs/verification/2026-10-25-rectangle-reproduction.md)を参照し、失われた追加調査全体が復元済みとは扱いません。
+
+同じ診断は [decoder の各段と同一入力 replay](docs/verification/2026-10-25-decoder-localization.md)も記録します。`references` は固定 anchor、各 layer の `reference_points` は更新後の消費座標です。局所 replay の成功で元の G1 を合格に変更しません。
+
+2026-10-25 の方針点検で、予定していた decoder 全体の同一入口 replay は保留しました。PR #5 は保存済み診断の範囲で区切り、次は各実行系自身の特徴を使う学習・出力への影響を優先します。詳細は [ADR 0005](docs/decisions/0005-bound-numerical-investigation.md)。
+
 ## PR とマージ
 
 - 作業ごとに専用ブランチを用い、`main` へ直接変更を push しない。
+- 長い調査・実装はレビュー可能な小さな単位に分け、節目で専用ブランチへ保存する。未完成なら draft PR と未検証事項を残し、作業停止前に GitHub で保存済みの SHA を確認する。ローカル commit だけを永続保存と扱わない。
+- PR #4 後の未 push 作業は自動整理で失われた。[復元メモ](docs/verification/2026-10-24-dfine-prefix-investigation.md)の過去の観測値を、現在のコード・生ログ・テスト成功の代用にしない。未保存の検証コードは再構築と再実行が必要。
 - レビュー可能な単位で PR を作る。マージと自動マージの設定はユーザーが行う。
 - PR には変更理由、実装した動作、確認した内容、未検証事項、必要なら動作確認 URL を記載する。
 - 他の PR が未マージの場合は、依存関係と比較元を明記する。無関係な変更を含めない。

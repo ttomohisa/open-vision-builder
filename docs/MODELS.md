@@ -7,6 +7,8 @@ MobileNetV4 Conv Small は P1a の分類技術検証に限定して固定・変�
 
 関連文書: [製品要件](PRODUCT.md) / [構成](ARCHITECTURE.md) / [検証計画](VERIFICATION.md) / [進捗](STATUS.md)
 
+PR #4 後の追加入力には最終出力不一致の観測記録もあります。生レポートと未 push コードが失われたため、[復元メモ](verification/2026-10-24-dfine-prefix-investigation.md)を参考に再現が必要です。重み・ライセンス・採用状態は変更せず、D-FINE の製品採用は保留します。
+
 ## 1. 初期候補
 
 | タスク / プロファイル | 正確なモデル ID と重みの出典 | 用途 |

@@ -4,6 +4,10 @@
 
 状態: **分類と検出の最終ヘッドに部分結果あり。GridSample は修正後 PASS、検出の中間特徴量 G1 は FAIL。全体のリリースゲートは未完了。** 本書の合格条件は維持し、部分結果・失敗・未実施を区別する。[分類](verification/2026-10-24-browser-classification.md)、[モデル準備](verification/2026-10-24-model-preparation.md)、[GridSample 修正](verification/2026-10-24-grid-sample-correction.md)、[D-FINE 基礎検証](verification/2026-10-24-dfine-foundation.md) を参照する。
 
+PR #4 後の[追加調査メモ](verification/2026-10-24-dfine-prefix-investigation.md)には最終出力の不一致も記録されています。ただし、未 push の検証コードと生ログが失われており、このメモでゲートの合格範囲を追加しません。G1 は FAIL のままです。その後の[矩形1画像の新しい実行記録](verification/2026-10-25-rectangle-reproduction.md)はコードと JSON を保存しており、中間特徴の不一致を再現しました。これも品質・ブラウザ学習・モデル全体の合格を追加するものではありません。
+
+[ADR 0005](decisions/0005-bound-numerical-investigation.md) により、追加の decoder 分解を自動的に続けず、学習・出力への影響を優先します。これは検証作業の順序の変更であり、本書のゲート・既存の数値条件・G1 FAIL の変更ではありません。
+
 ## 1. 対象と変更できない条件
 
 [AGENTS.md](../AGENTS.md) を作業規則とし、[PRODUCT.md](PRODUCT.md)、[ARCHITECTURE.md](ARCHITECTURE.md)、[MODELS.md](MODELS.md)、[STATUS.md](STATUS.md) と整合させる。
