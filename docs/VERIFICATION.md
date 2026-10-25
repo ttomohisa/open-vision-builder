@@ -28,12 +28,12 @@ PR #4 後の[追加調査メモ](verification/2026-10-24-dfine-prefix-investigat
 | ID | 判定対象 | 状態 |
 | --- | --- | --- |
 | G0 | ソース・重み・商用利用条件・変換履歴の固定 | PARTIAL: 分類 Small と検証用 Nano COCO の正確な safetensors・コード・Apache 表示・変換記録を固定。検出は製品未採用 |
-| G1 | 元実装とブラウザーの forward 一致 | PARTIAL / detector features FAIL: 分類と検出の最終 logits/boxes は比較済み。検出の bboxInput/classInput/residualCorners に失敗が残る |
+| G1 | 元実装とブラウザーの forward 一致 | PARTIAL / detector FAIL: 旧中間特徴の失敗を維持。実画像の own-path 比較では tuning 2画像の最終 logits/boxes も学習前後とも条件外 |
 | G2 | 学習パラメーターへの勾配と実更新 | PARTIAL: 分類ヘッド、修正 GridSample の値/両勾配、同一特徴での最終 pretrained bbox/class ヘッドの全勾配・SGD を確認。完全 detector backprop は未実施 |
-| G3 | 少量データへの過適合と事前学習済み位置推定の更新 | PARTIAL: 分類合成データの損失低下。検出の pretrained 位置重み更新・box 変化・2 step 損失低下を確認したが、少量過適合は NOT RUN |
-| G4 | 独自タスクの未使用データ評価と公平な PyTorch 比較 | NOT RUN: 実データ・同条件学習比較なし |
+| G3 | 少量データへの過適合と事前学習済み位置推定の更新 | PARTIAL: 検出の pretrained 位置重み更新を実画像12 stepでも確認。ただし両実装の損失改善は約0.004%で1%基準に未達、少量過適合は未認定 |
+| G4 | 独自タスクの未使用データ評価と公平な PyTorch 比較 | PARTIAL evidence / NOT QUALIFIED: 検出の公開COCO10画像で同条件比較を実施。両実装の損失改善が事前1%基準に未達。独自タスク・分類実画像・一般化品質は未認定 |
 | G5 | クラス数・空画像・画像形状の境界条件 | PARTIAL: 分類の入力/shape/class/取消。検出の空/単一/複数 target・矩形割当・disjoint GIoU 勾配・不正入力・取消を検証。独自クラスは未実施 |
-| G6 | 学習後の完全 FP32 ONNX と独立した推論一致 | PARTIAL: 分類と限定した検出ヘッドの完全モデルを fresh browser / Python CPU で比較。検出 G1 の失敗は解消しない。edge は未検証 |
+| G6 | 学習後の完全 FP32 ONNX と独立した推論一致 | PARTIAL / real-image detector FAIL: 新しい検出出力は fresh browser 10/10一致、Python CPU は2/10不一致。旧合成fixtureの部分成功・G1 FAILを維持。edgeは未検証 |
 | G7 | キャッシュ・非公開状態・隠れた通信への非依存 | PARTIAL: 分類と検出出力を別 CPU runtime で推論。kit はモデル追加取得・変換なし。全対応環境の認定は未完了 |
 | G8 | 実機での時間・メモリー・中断・保存・再開 | PARTIAL: CI相当 Linux の経過時間と取消のみ。対象 PC・メモリ・再開は NOT RUN |
 | G9 | データ非送信と再現可能な証拠の確認 | PARTIAL: 合成 fixture の E2E 通信観測・依存固定。製品全体の確認は未完了 |
@@ -154,3 +154,5 @@ jax-js の ONNX ローダーは initializer を内部に保持するため、学
 - [D-FINE ONNX export](https://github.com/Peterande/D-FINE/blob/master/tools/deployment/export_onnx.py): deploy モデルと公開 export の入力・出力。
 
 上記 URL の実装確認と本プロジェクトでの動作検証は別である。実行時には参照 commit を固定する。
+
+2026-10-25 の [実画像 own-prefix 比較](verification/2026-10-25-own-prefix-impact.md)は、同一特徴対照の成功と、学習改善条件・Python export の未達を保存した。条件・画像・分割を結果へ合わせて変更せず一回の完全測定で終了した。旧 G1 FAIL と完全 ONNX 必須の製品要件は維持する。

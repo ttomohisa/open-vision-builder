@@ -1,6 +1,6 @@
 # 開発の順序
 
-更新日: 2026-10-24 JST。
+更新日: 2026-10-25 JST。
 
 UI を広く作る前に、実際のブラウザ学習と ONNX 出力が成立することを確認します。各段階はレビュー可能な PR に分けます。検証の途中結果だけを提出する場合は、残っている条件を明記します。
 
@@ -22,6 +22,8 @@ P1a では MobileNetV4 Conv Small の固定特徴 + 分類ヘッドの学習、�
 **P1b は基礎検証を進行中**です。GridSample を修正・独立検証し、事前学習済み D-FINE Nano の最終 bbox / class ヘッド更新、完全 ONNX、独立 browser / Python 推論を確認しました。一方、前段の中間特徴量の一致ゲートは FAIL です。[部分結果](verification/2026-10-24-dfine-foundation.md) と [ADR 0003](decisions/0003-dfine-foundation.md) に従い、この未解決条件、独自クラス、完全な学習レシピ、精度評価を後続 PR で段階的に進めます。元の失敗や許容差を置き換えて P1 全体を完了にはしません。
 
 2026-10-25 の再開時点では PR #4 はマージ済みです。その後の未 push 調査コードと生ログが自動整理で失われたため、[追加調査の復元メモ](verification/2026-10-24-dfine-prefix-investigation.md)と [ADR 0004](decisions/0004-dfine-investigation-checkpoint.md)を保存しました。続けて[矩形1画像の再現](verification/2026-10-25-rectangle-reproduction.md)と [decoder の局所診断](verification/2026-10-25-decoder-localization.md)を PR #5 に保存しました。中間特徴は不一致のままです。[ADR 0005](decisions/0005-bound-numerical-investigation.md) に従い、この診断で PR を区切り、次は各実行系自身の特徴を使う学習・出力への影響を優先します。分類の実データ品質確認は P1 内で独立して進めます。失われた大きな検証基盤の全面再構築や、全演算の数値差の説明を、その前提にはしません。
+
+PR #5 のマージ後、[PR #6 の公開実画像比較](verification/2026-10-25-own-prefix-impact.md)を完了しました。同一特徴の対照と学習中の損失・勾配・更新は比較条件内でしたが、両実装の学習改善は約0.004%で1%基準に届かず、Python export は2画像で不一致でした。この実験は終了し、次の独立した P1 作業は**分類の実画像品質と同条件 PyTorch 比較**です。検出は限定レシピ・学習量・データ適合性の見直しと、既知の export 不一致を残課題とし、新たな試験は別の事前登録・上限を必要とします。
 
 最初は MobileNetV4 Conv Small と D-FINE Nano を使って経路を検証し、品質を重視した Medium / Small の候補へ進めます。候補の変更はモデル名だけで判断せず、[MODELS](MODELS.md) の条件と [VERIFICATION](VERIFICATION.md) の結果に基づけます。
 

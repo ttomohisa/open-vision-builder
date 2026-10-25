@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "planSha256": "1b8ef180b93e5b6a224fb396a1a4b54f24a8e0b74cd109b13f15c567b85888d3",
+  "datasetManifestSha256": "464570f5138ddfdd159892a9e3a9a4723d45ee335de1bc93965bc93fc6b289a6",
+  "status": "error",
+  "passed": false,
+  "detectorQualification": "FAIL",
+  "releaseReady": false,
+  "controls": [],
+  "startedAt": "2026-10-25T00:36:21.836Z",
+  "environment": {
+    "node": "v24.22.1",
+    "platform": "linux",
+    "architecture": "x64",
+    "browser": "156.0.8078.4"
+  },
+  "harnessSha256": "25854967d7e2d89c219e100da9a20f5a459f78aee0eb81ef2ee4577cafbf48ae",
+  "codeSha256": {
+    "scripts/run_detector_impact.mjs": "9abb9a73c048bacf9b68f6b37072c5d51b035093213c69adac14823861cec6eb",
+    "scripts/detector-impact-state.mjs": "6a012ef0ba1d2d7f8a731644991048c1d00b5693efe9ddd2d50f4bc7d8d5eedd",
+    "scripts/detector_impact_reference.py": "2acc94f6403324219a57802faafcd4037f6383b1ed3bf023d0d1983ddb332eb9",
+    "scripts/verify_detector_impact_export.py": "58c261874e8e11ae6cc95bcbb87f75f574ddefa2b440d9d1f2a33fa213adad43",
+    "tests/fixtures/detection-impact-browser.ts": "4c7ad9f5f25fa17ebe0a2f48e1524bf007f75dbc9998d4df58630129e2b8c388",
+    "tests/fixtures/detector-training-tolerances.json": "f2dad71eb0d26ef02a1164632d169783ff7f392089c6a036f5c2b4001df1ee5c"
+  },
+  "progress": {
+    "status": "stopped",
+    "completedSteps": 0,
+    "controls": [],
+    "reason": "RangeError [ERR_OUT_OF_RANGE]: The value of \"timeout\" is out of range. It must be an unsigned integer. Received 895066.791573"
+  },
+  "durationSeconds": 4.933981224,
+  "reason": "RangeError [ERR_OUT_OF_RANGE]: The value of \"timeout\" is out of range. It must be an unsigned integer. Received 895066.791573",
+  "decision": "inconclusive-execution-error",
+  "codeCommit": "f5b07fc82d950106c2e4165fea3869236c488b2f",
+  "note": "Infrastructure failure before the first Python control; zero accepted updates. Original raw browser proposal is retained locally. No scientific decision was available."
+}

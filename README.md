@@ -19,6 +19,8 @@ A browser-based vision model builder for image classification and object detecti
 
 公開画面の学習は現在 **WASM / CPU、分類ヘッドのみ**です。開発用の検出試験では、COCO 学習済み D-FINE Nano の最終 bbox / class ヘッドを実更新し、完全 ONNX をブラウザと Python で照合しています。ただし、元実装と frozen prefix の中間特徴量の一致ゲートは **FAIL** です。検出モデルを画面から選択したり、Pages のモデルとして公開したりする段階にはしていません。
 
+その後の[公開実画像10枚・12 stepの比較](docs/verification/2026-10-25-own-prefix-impact.md)でも、両実装の損失改善は事前条件に届きませんでした。完全 ONNX の fresh browser 一致は10/10画像、Python CPU 一致は8/10画像で、2画像の不一致を保持しています。検出器の製品採用を認定する結果ではありません。
+
 独自クラスの検出、WebGPU、バックボーンの Fine-tuning、実データでの品質、ピークメモリ、保存・再開は未対応または未検証です。生成サンプルの正解率は実画像の品質を示しません。ページを閉じると作業中のデータは失われるため、必要なモデルは先にダウンロードしてください。
 
 [分類の実測](docs/verification/2026-10-24-browser-classification.md)・[検出の部分結果と未解決ゲート](docs/verification/2026-10-24-dfine-foundation.md)・[現在の状態](docs/STATUS.md)に、確認した範囲と残課題を記録しています。
@@ -91,6 +93,18 @@ npm run test:browser
 ブラウザ試験は調査用モデルをテスト専用のローカル URL で読むため、`public/` や `dist/` に D-FINE をコピーする必要はありません。部品検証の成功、検出の `detectorQualification: FAIL`、製品全体の未完了をレポートと ZIP に残します。80 COCO クラスを維持した最終段だけの学習で、独自クラス・元レシピ全体・実用精度の成立を意味しません。
 
 `dist/` は静的配信できます。GitHub Pages 用 CI・公開 workflow と Cloudflare 用の設定は [DEPLOYMENT](docs/DEPLOYMENT.md) を参照してください。Pages の初回設定と実際の公開確認は別工程です。公開確認前の URL はプレビューとして案内しません。
+
+### 公開実画像での限定した学習影響比較（開発者用）
+
+[事前登録した計画](docs/superpowers/plans/2026-10-25-dfine-own-prefix-impact.md)に従い、各 runtime 自身の frozen-prefix 特徴を使う12 step の比較を行うコードを用意しています。[画像・注釈・分割・利用条件](docs/verification/2026-10-25-impact-data.md)を固定し、同じ特徴・重みの対照が失敗した場合は停止します。
+
+```bash
+artifacts/p1b/.venv-detector/bin/python scripts/prepare_detector_impact_data.py
+node scripts/run_detector_impact.mjs --check
+node scripts/run_detector_impact.mjs
+```
+
+`--check` は固定ファイルと Chromium 内の module 読込までの事前確認です。推論・学習は行いません。引数なしの実験は最大15分で、既存の出力先 `artifacts/p1d/run/` を上書きしません。`status.json`、途中対照、全勾配・更新、比較、完全 ONNX を保存します。数値条件外の結果も保存し、構造・hash・実行エラーは非0終了します。実測の有無と結果は [STATUS](docs/STATUS.md)を確認してください。これらの開発用モデル・画像を Pages に公開したり、元の G1 FAIL を変更したりする処理ではありません。
 
 ## 製品として守る方針
 
