@@ -33,13 +33,13 @@ Non-goals:
 ## Storage contract
 
 - IndexedDB: open-vision-builder / projects / classification-default.
-- OPFS: projects/classification-default/images/<sample-id> と projects/classification-default/result/model-kit.zip.
+- OPFS: projects/classification-default/objects/<sha256>。画像と model-kit ZIP を content-addressed object として保存し、manifest が参照する。
 - manifest schemaVersion: 1; task: classification; model: mobilenetv4-conv-small.
 - sample metadata: id/name/mime/bytes/label/split/synthetic/sha256.
 - settings: epochs / learningRate.
 - result metadata: RunSummary + model-kit bytes/hash when present.
 
-保存は OPFS の必要ファイルを書き終えてから IndexedDB manifest を確定する。manifest だけが復元可能な世代を指す。manifest 確定後に不要 OPFS ファイルを掃除する。自動保存に失敗しても現在の React state は消さない。
+保存は必要な content-addressed object を OPFS に作成してから IndexedDB manifest を確定する。同一 hash の既存 object は上書きしない。manifest 確定後に参照されなくなった object を掃除するため、import や自動保存が途中で失敗しても旧 manifest と旧 object の組み合わせを壊さない。自動保存に失敗しても現在の React state は消さない。
 
 ## Backup format
 
