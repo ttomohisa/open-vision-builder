@@ -289,3 +289,57 @@ progress::-moz-progress-bar { background: #13918d; border-radius: 8px; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; }
 }
+
+
+.project-storage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: -2px 0 18px;
+  padding: 12px 14px;
+  border: 1px solid #dce6eb;
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+.project-storage-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px 12px; min-width: 0; }
+.project-storage-status strong { color: #263f4c; font-size: 11px; }
+.project-storage-status span { color: #718793; font-size: 10px; }
+.project-storage-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+.project-storage .button { min-height: 34px; padding: 7px 11px; font-size: 10px; }
+.project-storage .text-button { font-size: 10px; white-space: nowrap; }
+.project-import { position: relative; overflow: hidden; cursor: pointer; }
+.project-import.is-disabled { opacity: .55; cursor: not-allowed; }
+.project-import input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.project-delete { color: #a14f47; }
+.project-error {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: #fff4f2;
+  color: #91483f;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  .project-storage { align-items: flex-start; flex-direction: column; }
+  .project-storage-actions { justify-content: flex-start; width: 100%; }
+}
+
+@media (max-width: 520px) {
+  .project-storage-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .project-storage .button { width: 100%; }
+  .project-storage .text-button { text-align: left; }
+}

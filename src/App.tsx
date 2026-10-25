@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Sample, Split, WorkerRequest, WorkerResponse } from './protocol';
+import { createProjectBackup, parseProjectBackup } from './project/backup';
+import { clearProject, getStorageStatus, loadProject, requestPersistentStorage, saveProject, type ProjectStorageStatus } from './project/storage';
+import type { ProjectSnapshot } from './project/types';
 
 const MAX_IMAGES = 64;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -9,6 +12,7 @@ type PreviewSample = Sample & { preview: string; synthetic: boolean };
 type Result = Extract<WorkerResponse, { type: 'result' }>;
 type Progress = Extract<WorkerResponse, { type: 'progress' }>;
 type BuildInfo = { commit?: string; sha?: string; pr?: number | string };
+type ProjectSaveState = 'loading' | 'idle' | 'saving' | 'saved' | 'error' | 'unavailable';
 
 function Icon({ kind }: { kind: 'plus' | 'arrow' | 'download' | 'check' | 'shield' | 'image' }) {
   const paths = {
@@ -55,6 +59,12 @@ function formatDuration(ms: number) {
   return seconds < 60 ? `${seconds.toFixed(1)}秒` : `${Math.floor(seconds / 60)}分${Math.round(seconds % 60)}秒`;
 }
 
+function formatBytes(value: number | null) {
+  if (value === null) return '—';
+  if (value < 1024 * 1024) return `${Math.max(0, value / 1024).toFixed(1)} KiB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MiB`;
+}
+
 export default function App() {
   const [labels, setLabels] = useState(['クラス1', 'クラス2']);
   const [samples, setSamples] = useState<PreviewSample[]>([]);
@@ -67,19 +77,27 @@ export default function App() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [buildInfo, setBuildInfo] = useState<BuildInfo | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const [projectSaveState, setProjectSaveState] = useState<ProjectSaveState>('loading');
+  const [projectError, setProjectError] = useState('');
+  const [storageStatus, setStorageStatus] = useState<ProjectStorageStatus | null>(null);
+  const [storageBlocked, setStorageBlocked] = useState(false);
   const workerRef = useRef<Worker | null>(null);
   const jobIdRef = useRef(0);
   const samplesRef = useRef<PreviewSample[]>([]);
   const urlsRef = useRef(new Set<string>());
   const mountedRef = useRef(false);
+  const skipNextAutosaveRef = useRef(true);
+  const saveGenerationRef = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
+    let active = true;
     const controller = new AbortController();
     fetch(`${import.meta.env.BASE_URL}build-info.json`, { signal: controller.signal })
       .then(response => response.ok ? response.json() : null)
       .then((value: unknown) => {
-        if (value && typeof value === 'object' && mountedRef.current) {
+        if (value && typeof value === 'object' && active && mountedRef.current) {
           const info = value as Record<string, unknown>;
           setBuildInfo({
             commit: typeof info.commit === 'string' ? info.commit : undefined,
@@ -88,18 +106,71 @@ export default function App() {
           });
         }
       }).catch(() => { /* Build metadata is optional in local development. */ });
+
+    void (async () => {
+      try {
+        const status = await getStorageStatus();
+        if (!active || !mountedRef.current) return;
+        setStorageStatus(status);
+        if (!status.supported) {
+          setStorageBlocked(true);
+          setProjectSaveState('unavailable');
+          return;
+        }
+        const stored = await loadProject();
+        if (!active || !mountedRef.current) return;
+        if (stored) applyProjectSnapshot(stored);
+        skipNextAutosaveRef.current = true;
+        setStorageBlocked(false);
+        setProjectSaveState(stored ? 'saved' : 'idle');
+      } catch (caught) {
+        if (!active || !mountedRef.current) return;
+        setStorageBlocked(true);
+        setProjectSaveState('error');
+        setProjectError(`保存されたプロジェクトを復元できませんでした。${caught instanceof Error ? ` ${caught.message}` : ''}`);
+      } finally {
+        if (active && mountedRef.current) setHydrated(true);
+      }
+    })();
+
     return () => {
+      active = false;
       mountedRef.current = false;
       controller.abort();
       workerRef.current?.terminate();
       workerRef.current = null;
       jobIdRef.current += 1;
+      saveGenerationRef.current += 1;
       for (const url of urlsRef.current) URL.revokeObjectURL(url);
       urlsRef.current.clear();
     };
   }, []);
 
-  const disabled = busy || preparing;
+  useEffect(() => {
+    if (!hydrated || storageBlocked || !storageStatus?.supported || busy || preparing) return;
+    if (skipNextAutosaveRef.current) {
+      skipNextAutosaveRef.current = false;
+      return;
+    }
+    const generation = ++saveGenerationRef.current;
+    setProjectSaveState('saving');
+    const timer = window.setTimeout(() => {
+      void saveProject(makeProjectSnapshot()).then(async () => {
+        if (!mountedRef.current || generation !== saveGenerationRef.current) return;
+        setProjectSaveState('saved');
+        setProjectError('');
+        const status = await getStorageStatus();
+        if (mountedRef.current && generation === saveGenerationRef.current) setStorageStatus(status);
+      }).catch(caught => {
+        if (!mountedRef.current || generation !== saveGenerationRef.current) return;
+        setProjectSaveState('error');
+        setProjectError(`自動保存できませんでした。${caught instanceof Error ? ` ${caught.message}` : ''} 現在のタブの内容は残っています。バックアップを書き出してください。`);
+      });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [hydrated, storageBlocked, storageStatus?.supported, busy, preparing, labels, samples, epochs, learningRate, result]);
+
+  const disabled = busy || preparing || !hydrated;
   const trimmedLabels = labels.map(label => label.trim().normalize('NFC'));
   const labelError = trimmedLabels.some(label => !label)
     ? 'すべてのクラスに名前を付けてください。空白だけの名前は使えません。'
@@ -122,6 +193,51 @@ export default function App() {
   const canRun = !disabled && !labelError && dataReady && parametersValid;
   const hasSyntheticImages = samples.some(sample => sample.synthetic);
   const fraction = Math.max(0, Math.min(1, progress?.fraction ?? 0));
+  const projectSaveStateText: Record<ProjectSaveState, string> = {
+    loading: '保存を読み込み中…',
+    idle: 'この端末にはまだ保存していません',
+    saving: '自動保存中…',
+    saved: '自動保存済み',
+    error: '自動保存できません',
+    unavailable: '自動保存に非対応',
+  };
+
+  function makeProjectSnapshot(): ProjectSnapshot {
+    return {
+      labels: [...labels],
+      epochs,
+      learningRate,
+      samples: samplesRef.current.map(({ id, name, label, split, file, synthetic }) => ({ id, name, label, split, file, synthetic })),
+      result: result ? { summary: result.summary, archive: new Uint8Array(result.archive.slice(0)) } : null,
+    };
+  }
+
+  function restoreResult(value: ProjectSnapshot['result']): Result | null {
+    if (!value) return null;
+    const archive = new Uint8Array(value.archive.byteLength);
+    archive.set(value.archive);
+    return { type: 'result', id: 0, summary: value.summary, archive: archive.buffer, model: new ArrayBuffer(0), report: '' };
+  }
+
+  function applyProjectSnapshot(snapshot: ProjectSnapshot) {
+    workerRef.current?.terminate();
+    workerRef.current = null;
+    jobIdRef.current += 1;
+    setBusy(false);
+    setProgress(null);
+    setError('');
+    setLabels([...snapshot.labels]);
+    setEpochs(snapshot.epochs);
+    setLearningRate(snapshot.learningRate);
+    updateSamples(snapshot.samples.map(sample => previewSample(sample, sample.synthetic)));
+    setResult(restoreResult(snapshot.result));
+  }
+
+  async function refreshStorageStatus() {
+    const status = await getStorageStatus();
+    if (mountedRef.current) setStorageStatus(status);
+    return status;
+  }
 
   function invalidate() {
     workerRef.current?.terminate();
@@ -131,6 +247,7 @@ export default function App() {
     setProgress(null);
     setError('');
     setNotice('');
+    setProjectError('');
   }
 
   function previewSample(sample: Sample, synthetic: boolean): PreviewSample {
@@ -286,13 +403,15 @@ export default function App() {
     }
   }
 
-  function downloadModel() {
-    if (!result) return;
-    const url = URL.createObjectURL(new Blob([result.archive], { type: 'application/zip' }));
+  function downloadBytes(bytes: Uint8Array | ArrayBuffer, filename: string) {
+    const source = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    const owned = new Uint8Array(source.byteLength);
+    owned.set(source);
+    const url = URL.createObjectURL(new Blob([owned.buffer], { type: 'application/zip' }));
     urlsRef.current.add(url);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'open-vision-model.zip';
+    anchor.download = filename;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -300,6 +419,76 @@ export default function App() {
       URL.revokeObjectURL(url);
       urlsRef.current.delete(url);
     }, 10_000);
+  }
+
+  function downloadModel() {
+    if (result) downloadBytes(result.archive, 'open-vision-model.zip');
+  }
+
+  async function downloadProjectBackup() {
+    if (disabled) return;
+    setProjectError('');
+    try {
+      const archive = await createProjectBackup(makeProjectSnapshot());
+      downloadBytes(archive, 'open-vision-project.ovb.zip');
+    } catch (caught) {
+      setProjectError(`バックアップを書き出せませんでした。${caught instanceof Error ? ` ${caught.message}` : ''}`);
+    }
+  }
+
+  async function importProjectBackup(file: File) {
+    if (disabled) return;
+    setProjectError('');
+    setPreparing(true);
+    try {
+      const snapshot = await parseProjectBackup(new Uint8Array(await file.arrayBuffer()));
+      if (storageStatus?.supported) {
+        await saveProject(snapshot);
+        setStorageBlocked(false);
+        setProjectSaveState('saved');
+      }
+      skipNextAutosaveRef.current = true;
+      applyProjectSnapshot(snapshot);
+      setNotice('バックアップを読み込みました。');
+      if (storageStatus?.supported) await refreshStorageStatus();
+      else setProjectSaveState('unavailable');
+    } catch (caught) {
+      setProjectError(`バックアップを読み込めませんでした。${caught instanceof Error ? ` ${caught.message}` : ''}`);
+    } finally {
+      if (mountedRef.current) setPreparing(false);
+    }
+  }
+
+  async function deleteLocalProject() {
+    if (disabled || !storageStatus?.supported) return;
+    if (!window.confirm('この端末に保存した分類プロジェクトを削除します。現在の画像・設定・学習結果も画面から消えます。')) return;
+    setPreparing(true);
+    setProjectError('');
+    try {
+      await clearProject();
+      skipNextAutosaveRef.current = true;
+      setStorageBlocked(false);
+      applyProjectSnapshot({ labels: ['クラス1', 'クラス2'], epochs: '40', learningRate: '0.01', samples: [], result: null });
+      setProjectSaveState('idle');
+      setNotice('端末内のプロジェクトを削除しました。');
+      await refreshStorageStatus();
+    } catch (caught) {
+      setProjectError(`端末内のプロジェクトを削除できませんでした。${caught instanceof Error ? ` ${caught.message}` : ''}`);
+    } finally {
+      if (mountedRef.current) setPreparing(false);
+    }
+  }
+
+  async function protectLocalStorage() {
+    if (disabled || !storageStatus?.supported) return;
+    setProjectError('');
+    try {
+      const granted = await requestPersistentStorage();
+      await refreshStorageStatus();
+      setNotice(granted ? 'ブラウザに永続保存を要求し、許可されました。' : '永続保存は許可されませんでした。バックアップを定期的に書き出してください。');
+    } catch (caught) {
+      setProjectError(`永続保存を要求できませんでした。${caught instanceof Error ? ` ${caught.message}` : ''}`);
+    }
   }
 
   return (
@@ -321,7 +510,29 @@ export default function App() {
           <li className={busy ? 'is-current' : result ? 'is-complete' : ''}><a href="#training"><span>02</span><div><strong>ブラウザで学習</strong><small>分類部分の重みを更新</small></div></a></li>
           <li className={result ? 'is-current' : ''}><a href="#result"><span>03</span><div><strong>モデルを持ち出す</strong><small>検証済みのONNXを保存</small></div></a></li>
         </ol>
-        <div className="local-note"><Icon kind="shield" /><p><strong>画像はこの端末で処理します。</strong> アップロードは行いません。この検証版ではデータを自動保存しません。</p></div>
+        <div className="local-note"><Icon kind="shield" /><p><strong>画像はこの端末で処理します。</strong> アップロードは行いません。分類プロジェクトは対応ブラウザのローカル領域へ自動保存し、バックアップで持ち出せます。</p></div>
+
+        <section className="project-storage" aria-label="プロジェクトの保存">
+          <div className="project-storage-status">
+            <strong data-testid="project-save-state">{projectSaveStateText[projectSaveState]}</strong>
+            <span>{storageStatus?.supported ? `${formatBytes(storageStatus.usage)} / ${formatBytes(storageStatus.quota)} 使用` : storageStatus?.reason ?? '保存機能を確認しています'}</span>
+            {storageStatus?.supported && <span>{storageStatus.persisted === true ? '永続保存: 許可済み' : storageStatus.persisted === false ? '永続保存: 未許可' : '永続保存: 状態不明'}</span>}
+          </div>
+          <div className="project-storage-actions">
+            <button type="button" className="button button-secondary" disabled={disabled} onClick={() => void downloadProjectBackup()}>バックアップを書き出す</button>
+            <label className={`button button-secondary project-import${disabled ? ' is-disabled' : ''}`}>
+              バックアップを読み込む
+              <input type="file" accept=".zip,application/zip" disabled={disabled} aria-label="プロジェクトのバックアップを読み込む" onChange={event => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = '';
+                if (file) void importProjectBackup(file);
+              }} />
+            </label>
+            {storageStatus?.supported && storageStatus.persisted === false && <button type="button" className="text-button" disabled={disabled} onClick={() => void protectLocalStorage()}>保存を保護</button>}
+            {storageStatus?.supported && <button type="button" className="text-button project-delete" disabled={disabled} onClick={() => void deleteLocalProject()}>端末内のプロジェクトを削除</button>}
+          </div>
+          {projectError && <div className="project-error" role="alert">{projectError}</div>}
+        </section>
 
         <section className="panel dataset-panel" id="dataset" aria-labelledby="dataset-heading">
           <div className="section-heading"><div className="section-title"><span className="step-number">01</span><div><h2 id="dataset-heading">画像を準備する</h2><p>クラスごとに、学習用と評価用の画像を分けて追加します。</p></div></div><button type="button" className="button button-secondary sample-button" disabled={disabled} onClick={useSample}><Icon kind="image" />サンプルで試す</button></div>
@@ -375,7 +586,7 @@ export default function App() {
           </section>
         </div>
       </main>
-      <footer className="site-footer"><span>Open Vision Builder <span className="footer-separator">/</span> Classification preview <span className="footer-separator">/</span> <a href={`${import.meta.env.BASE_URL}runtime/THIRD_PARTY_LICENSES.txt`} target="_blank" rel="noopener">ライセンス表示</a></span><span>データはこのタブを閉じると失われます。{(buildInfo?.commit || buildInfo?.sha) && <code>commit {(buildInfo.commit || buildInfo.sha)!.slice(0, 8)}</code>}{buildInfo?.pr && <span className="build-pr">PR #{buildInfo.pr}</span>}</span></footer>
+      <footer className="site-footer"><span>Open Vision Builder <span className="footer-separator">/</span> Classification preview <span className="footer-separator">/</span> <a href={`${import.meta.env.BASE_URL}runtime/THIRD_PARTY_LICENSES.txt`} target="_blank" rel="noopener">ライセンス表示</a></span><span>プロジェクトは対応ブラウザのこの端末内に保存されます。バックアップも併用してください。{(buildInfo?.commit || buildInfo?.sha) && <code>commit {(buildInfo.commit || buildInfo.sha)!.slice(0, 8)}</code>}{buildInfo?.pr && <span className="build-pr">PR #{buildInfo.pr}</span>}</span></footer>
     </div>
   );
 }
