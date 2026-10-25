@@ -6,7 +6,7 @@
 
 **P1a の分類はマージ済み。P1b は検出の最終ヘッド学習・完全 ONNX の基礎検証まで進行。検出の中間特徴量一致は FAIL、P1 全体と初期版は未完了です。**
 
-合意・検証方針は [PR #1](https://github.com/ttomohisa/open-vision-builder/pull/1) と [PR #2](https://github.com/ttomohisa/open-vision-builder/pull/2) で記録しました。[分類の PR #3](https://github.com/ttomohisa/open-vision-builder/pull/3)、[検出基礎検証の PR #4](https://github.com/ttomohisa/open-vision-builder/pull/4)、[再現・局所診断の PR #5](https://github.com/ttomohisa/open-vision-builder/pull/5) はマージ済みです。PR #5 のマージは 2026-10-25 00:13 UTC（09:13 JST）、比較元は `f73cdb9407f60fb402e23afa9abdefdd7e98e058`、今回のブランチは `test/dfine-own-prefix-impact` です。以後のマージ状況は [PR 一覧](https://github.com/ttomohisa/open-vision-builder/pulls)を確認します。
+合意・検証方針は [PR #1](https://github.com/ttomohisa/open-vision-builder/pull/1) と [PR #2](https://github.com/ttomohisa/open-vision-builder/pull/2) で記録しました。[分類の PR #3](https://github.com/ttomohisa/open-vision-builder/pull/3)、[検出基礎検証の PR #4](https://github.com/ttomohisa/open-vision-builder/pull/4)、[再現・局所診断の PR #5](https://github.com/ttomohisa/open-vision-builder/pull/5)、[検出の実画像比較の PR #6](https://github.com/ttomohisa/open-vision-builder/pull/6) はマージ済みです。PR #6 のマージは 2026-10-25 01:12 UTC（10:12 JST）。現在の比較元は `c088e211400e2db91e488858382fca39971cf41d`、作業ブランチは `test/classification-real-images` です。
 
 ## PR #4 後の作業と復元範囲
 
@@ -21,6 +21,14 @@ PR #5 の初回コミットは文書のみでした。その後、[矩形1画像
 ユーザーの指示に基づく[方針点検](decisions/0005-bound-numerical-investigation.md)で、数値調査の自動延長を止めました。PR #5 は現在の再現・局所診断で区切り、予定していた decoder 全体 replay は保留します。次は学習・出力への影響を優先し、分類の実データ品質確認も独立して進める方針です。今回の点検で新しい学習・精度実験を実行したものではありません。
 
 ## 実装・検証の状態
+
+### 分類の実画像比較: 事前登録の準備、モデル測定は NOT RUN
+
+[設計と固定条件](superpowers/specs/2026-10-25-classification-real-images-design.md)・[実装計画](superpowers/plans/2026-10-25-classification-real-images.md)・[データと出典](verification/2026-10-25-classification-data.md)を用意しました。公開写真5クラス60枚をモデル出力を見る前に選択し、データ担当と統合担当の双方が全60枚を目視しました。各クラス6 train / 2 tuning reserved / 4 evaluation で、今回の学習・推論対象は train と evaluation の50枚です。
+
+データの再現と固定 hash の検証に加え、レビュー修正後の JavaScript108/108件・Python112/112件・typecheck・build が成功しています。修正後の推論・学習を行わない Chromium `--check` も、固定した plan/data/model hash と対象50枚を確認して成功しました。GitHub CI は未完了です。**計画・コードの事前登録公開、実画像のモデル測定、結果の記録と判定はまだ行っていません。** 現段階を分類品質や完全 ONNX の実画像合格として扱いません。
+
+予定は既存 UI の既定値である40 SGD updates・learning rate 0.01 と同条件の独立 PyTorch 比較、および別 browser context / Python による完全 ONNX 照合です。実行は事前登録後に一回、最大10分とし、条件未達も保存します。canonical PNG・Small の固定 backbone とヘッド学習・WASM に範囲を限り、一般の JPEG decode、WebGPU、検出、G4 全体・P1 全体・製品リリースの認定を含めません。
 
 ### PR #6: 公開実画像での限定比較を完了、条件未達を保存
 
@@ -43,7 +51,7 @@ PR #5 の初回コミットは文書のみでした。その後、[矩形1画像
 | 検出の限定学習 | D-FINE Nano の最終 pretrained bbox / class、計60,372パラメータ。元の2 step の部品検証に加え、実画像の各 runtime 自身の特徴で12 step を比較。両実装の損失改善は約0.004%で、1%基準に未達 |
 | 検出の完全 ONNX | 更新した8テンソルを元の全グラフへ反映。従来の合成 fixture は照合済み。新しい実画像では fresh browser 10/10一致、Python CPU 8/10一致・2/10不一致。完全モデル生成と runtime 一致の未達を区別 |
 | 検出の未解決 | **G1: 中間特徴量の一致は FAIL**。全3入力の元 PyTorch / ORT 比較を保存。最初の Conv の FP32 差と後段での増幅を確認したが、全演算の同等性を証明したものではない。検出 UI・独自クラス・完全 fine-tuning・精度は未実装/未検証 |
-| 実データ品質 | 検出の公開10画像・同条件12 step比較を実施したが、学習効果の基準未達。小規模な既存COCOクラスの結果で、独自タスク/G4全体の認定ではない。分類の実画像品質・Mediumは未検証 |
+| 実データ品質 | 検出の公開10画像・同条件12 step比較は学習効果の基準未達で、独自タスク/G4全体を認定しない。分類は60枚のデータ準備・初回事前確認まで進行し、モデル測定は NOT RUN。Mediumは未検証 |
 | 環境 | Linux x86_64 / Headless Chrome 156.0.8078.4 / WASM、非隔離サブパス。一般 PC、Edge、WebGPU、edge 端末は未認定 |
 | 資源と継続性 | 経路の経過時間をレポート。ピークメモリ未測定。中断・古い結果の無効化は検証済み。保存・再開・バックアップは未実装 |
 | データ非送信 | 公開生成データのブラウザ試験で外部通信・GET 以外の通信なし。運営 API / DB なし |
@@ -54,6 +62,7 @@ PR #5 の初回コミットは文書のみでした。その後、[矩形1画像
 ## 証拠
 
 - [ブラウザ分類・Python 一致の記録](verification/2026-10-24-browser-classification.md): 実行コマンド、環境、測定結果、制約。
+- [分類の固定実画像と出典](verification/2026-10-25-classification-data.md)・[実画像比較の実装計画](superpowers/plans/2026-10-25-classification-real-images.md): 測定前に固定したデータ・条件、事前確認と未完了事項。モデル測定結果ではない。
 - [公開モデル準備](verification/2026-10-24-model-preparation.md): revision、SHA-256、完全 ONNX、PyTorch と ORT の比較。
 - [D-FINE に関係する演算 probe](verification/2026-10-24-dfine-probe.md): 固定した実装、再現値、失敗条件。
 - [GridSample の修正](verification/2026-10-24-grid-sample-correction.md): 元の失敗と、固定 hash の修正後の独立比較。
@@ -67,7 +76,7 @@ PR #5 の初回コミットは文書のみでした。その後、[矩形1画像
 
 ## 次の作業
 
-1. **分類の実画像品質と同条件 PyTorch 学習比較を、独立した次の P1 作業として進める。** 分割・レシピ・評価条件を先に固定する。PR #6 の検出実験は条件未達を保存して終了し、同じ PR で数値診断を延長しない。
+1. **分類の実画像品質と同条件 PyTorch 学習比較の事前登録を完成させる。** 固定した分割・レシピ・評価条件・コードを PR に保存し、その SHA と GitHub CI を確認してから、一回の測定と結果の保存へ進む。現在はモデル測定 NOT RUN。PR #6 の検出実験は条件未達を保存して終了しており、今回の分類作業で検出の数値診断を延長しない。
 2. 検出は、PyTorch 自身も学習効果の1%基準を満たさなかったため、限定レシピ・学習量・データ適合性を再評価する。独自クラス、完全な training forward・補助/分布損失等の採用範囲は段階的に決め、事前学習済み位置推定を引き継ぐ。今回の12 step を過適合・実用品質の証拠にしない。
 3. Python export の不一致は6012/12667の既知入力・保存済み比較を起点とする別課題。追加調査は [ADR 0005](decisions/0005-bound-numerical-investigation.md) の問い・修正仮説・結果別判断・予算が必要で、decoder 全体 replay や許容差調整を自動追加しない。元 G1 FAIL、検出 UI 非公開は維持する。
 4. WebGPU と対象 PC の時間・ピークメモリ、中断・checkpoint 再開を検証し、P1 全体の採否を判断する。

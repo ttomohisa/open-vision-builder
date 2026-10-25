@@ -94,7 +94,29 @@ npm run test:browser
 
 `dist/` は静的配信できます。GitHub Pages 用 CI・公開 workflow と Cloudflare 用の設定は [DEPLOYMENT](docs/DEPLOYMENT.md) を参照してください。Pages の初回設定と実際の公開確認は別工程です。公開確認前の URL はプレビューとして案内しません。
 
-### 公開実画像での限定した学習影響比較（開発者用）
+### 分類の実画像品質・同条件 PyTorch 比較（開発者用）
+
+[固定した設計](docs/superpowers/specs/2026-10-25-classification-real-images-design.md)と[実行計画](docs/superpowers/plans/2026-10-25-classification-real-images.md)に沿って、現在の分類画面の既定設定を公開写真で確認する準備を進めています。**実画像のモデル測定は NOT RUN、事前登録の公開と GitHub CI は未完了です。** [出典・利用条件・選択規則](docs/verification/2026-10-25-classification-data.md)を固定した5クラス60枚から、30枚を学習、20枚を評価に使い、調整用の10枚は今回は使用しません。
+
+上記の依存関係・公開モデル・Chromium を準備した開発環境で、データ再現と推論しない事前確認を実行します。
+
+```bash
+.venv/bin/python scripts/prepare_classification_data.py
+npm run build
+node scripts/run_classification_real.mjs --check
+```
+
+`--check` は固定 bytes、bundle、Chromium 内の module 読込を確認し、画像のモデル推論や学習は行いません。この実画像比較について CI に追加するのは、データ準備と `--check` までです。
+
+計画・入力 manifest・コードを PR に保存し、その SHA と最終検証を確認した後、一回だけ次の比較を実行します。
+
+```bash
+node scripts/run_classification_real.mjs
+```
+
+既定の40 full-batch SGD updates、learning rate 0.01 をブラウザと独立 PyTorch で比較し、完全 ONNX を別 browser context と Python で読み直します。実行上限は10分で、既存の `artifacts/p1e/run/` を上書きしません。品質・数値条件に届かない結果も保存し、結果に合わせた画像・設定の変更や自動再試行はしません。対象は canonical PNG、Small の固定 backbone と分類ヘッド、WASM の限定比較です。一般の JPEG decode、WebGPU、検出、製品リリースの認定は含めません。
+
+### 検出の公開実画像での限定した学習影響比較（開発者用）
 
 [事前登録した計画](docs/superpowers/plans/2026-10-25-dfine-own-prefix-impact.md)に従い、各 runtime 自身の frozen-prefix 特徴を使う12 step の比較を行うコードを用意しています。[画像・注釈・分割・利用条件](docs/verification/2026-10-25-impact-data.md)を固定し、同じ特徴・重みの対照が失敗した場合は停止します。
 
