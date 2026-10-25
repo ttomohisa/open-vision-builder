@@ -246,7 +246,7 @@ export function validateProjectManifest(value: unknown): ProjectManifest {
   return { schemaVersion: 1, task: PROJECT_TASK, model: PROJECT_MODEL, labels, epochs, learningRate, samples, result };
 }
 
-function validateSnapshotShape(snapshot: ProjectSnapshot) {
+export function validateProjectSnapshot(snapshot: ProjectSnapshot) {
   const labels = validateLabels(snapshot.labels);
   validateSetting(snapshot.epochs, 'epochs');
   validateSetting(snapshot.learningRate, 'learning rate');
@@ -269,7 +269,7 @@ function validateSnapshotShape(snapshot: ProjectSnapshot) {
   }
 }
 
-function validateModelKit(archive: Uint8Array) {
+export function validateProjectModelKit(archive: Uint8Array) {
   if (archive.byteLength > MAX_PROJECT_MODEL_KIT_BYTES) fail('Project model kit exceeds the supported size.');
   inspectZip(archive, { allowedMethods: new Set([0, 8]), maxEntries: MAX_MODEL_KIT_ENTRIES, maxExpandedBytes: MAX_MODEL_KIT_EXPANDED_BYTES });
   let files: Record<string, Uint8Array>;
@@ -287,7 +287,7 @@ async function checkedRef(path: string, data: Blob | Uint8Array, maxBytes: numbe
 }
 
 export async function createProjectBackup(snapshot: ProjectSnapshot): Promise<Uint8Array> {
-  validateSnapshotShape(snapshot);
+  validateProjectSnapshot(snapshot);
   const files: Record<string, Uint8Array> = {};
   const samples: ProjectSampleManifest[] = [];
   let total = 0;
@@ -305,7 +305,7 @@ export async function createProjectBackup(snapshot: ProjectSnapshot): Promise<Ui
 
   let result: ProjectManifest['result'] = null;
   if (snapshot.result) {
-    validateModelKit(snapshot.result.archive);
+    validateProjectModelKit(snapshot.result.archive);
     total += snapshot.result.archive.byteLength;
     if (total > MAX_PROJECT_BYTES) fail('Project backup exceeds the supported total size.');
     const archive = new Uint8Array(snapshot.result.archive);
@@ -363,7 +363,7 @@ export async function parseProjectBackup(bytes: Uint8Array): Promise<ProjectSnap
     if (!archive || archive.byteLength !== manifest.result.archive.bytes) fail('Project model kit size does not match its manifest.');
     if (await sha256Hex(archive) !== manifest.result.archive.sha256) fail('Project model kit checksum does not match its manifest.');
     const copy = new Uint8Array(archive);
-    validateModelKit(copy);
+    validateProjectModelKit(copy);
     result = { summary: manifest.result.summary, archive: copy };
   }
 
