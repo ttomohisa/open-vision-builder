@@ -19,9 +19,9 @@ UI を広く作る前に、実際のブラウザ学習と ONNX 出力が成立�
 
 P1a では MobileNetV4 Conv Small の固定特徴 + 分類ヘッドの学習、完全 ONNX、ブラウザ/Python 一致の経路を実装しました。[実測記録](verification/2026-10-24-browser-classification.md) と [ADR 0002](decisions/0002-classification-spike.md) を参照してください。
 
-**P1b は基礎検証を進行中**です。GridSample を修正・独立検証し、事前学習済み D-FINE Nano の最終 bbox / class ヘッド更新、完全 ONNX、独立 browser / Python 推論を確認しました。一方、前段の中間特徴量の一致ゲートは FAIL です。[部分結果](verification/2026-10-24-dfine-foundation.md) と [ADR 0003](decisions/0003-dfine-foundation.md) に従い、この未解決条件、独自クラス、完全な学習レシピ、精度評価を次の PR で進めます。元の失敗や許容差を置き換えて P1 全体を完了にはしません。
+**P1b は基礎検証を進行中**です。GridSample を修正・独立検証し、事前学習済み D-FINE Nano の最終 bbox / class ヘッド更新、完全 ONNX、独立 browser / Python 推論を確認しました。一方、前段の中間特徴量の一致ゲートは FAIL です。[部分結果](verification/2026-10-24-dfine-foundation.md) と [ADR 0003](decisions/0003-dfine-foundation.md) に従い、この未解決条件、独自クラス、完全な学習レシピ、精度評価を後続 PR で段階的に進めます。元の失敗や許容差を置き換えて P1 全体を完了にはしません。
 
-2026-10-25 の再開時点では PR #4 はマージ済みです。その後の未 push 調査コードと生ログが自動整理で失われたため、[追加調査の復元メモ](verification/2026-10-24-dfine-prefix-investigation.md)と [ADR 0004](decisions/0004-dfine-investigation-checkpoint.md)を先に保存します。続けて[矩形1画像の診断コードと新しい測定結果](verification/2026-10-25-rectangle-reproduction.md)を同じ PR #5 に保存しました。最終出力は今回は許容差内、中間特徴は不一致という結果です。次は保存した小さい再現を起点に decoder の差を絞ります。失われた大きな検証基盤の全面再構築を、その前提にはしません。
+2026-10-25 の再開時点では PR #4 はマージ済みです。その後の未 push 調査コードと生ログが自動整理で失われたため、[追加調査の復元メモ](verification/2026-10-24-dfine-prefix-investigation.md)と [ADR 0004](decisions/0004-dfine-investigation-checkpoint.md)を保存しました。続けて[矩形1画像の再現](verification/2026-10-25-rectangle-reproduction.md)と [decoder の局所診断](verification/2026-10-25-decoder-localization.md)を PR #5 に保存しました。中間特徴は不一致のままです。[ADR 0005](decisions/0005-bound-numerical-investigation.md) に従い、この診断で PR を区切り、次は各実行系自身の特徴を使う学習・出力への影響を優先します。分類の実データ品質確認は P1 内で独立して進めます。失われた大きな検証基盤の全面再構築や、全演算の数値差の説明を、その前提にはしません。
 
 最初は MobileNetV4 Conv Small と D-FINE Nano を使って経路を検証し、品質を重視した Medium / Small の候補へ進めます。候補の変更はモデル名だけで判断せず、[MODELS](MODELS.md) の条件と [VERIFICATION](VERIFICATION.md) の結果に基づけます。
 

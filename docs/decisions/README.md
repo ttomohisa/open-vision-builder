@@ -8,6 +8,7 @@
 | [0002](0002-classification-spike.md) | P1a の範囲で採用。全体の選定は継続 | 分類の固定特徴 + ヘッド学習と完全 ONNX を先に検証し、検出の失敗ゲートを継続する |
 | [0003](0003-dfine-foundation.md) | P1b の基礎実装に採用。検出 G1 は FAIL のまま保留 | 既存80クラスの最終 pretrained bbox/class ヘッドと完全 ONNX を検証し、前段の失敗を独立して残す |
 | [0004](0004-dfine-investigation-checkpoint.md) | 調査メモと復旧方針を保存。検出採用は保留 | 未 push 作業の消失を明示し、残った記録から矩形1画像の最小再現へ戻る |
+| [0005](0005-bound-numerical-investigation.md) | 調査の区切りと優先順位を採用。G1 と数値条件は維持 | 数値診断の自動延長を止め、学習・出力への影響と分類の実データ品質を優先する |
 
 ## 記録する内容
 
