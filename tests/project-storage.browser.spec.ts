@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { build } from 'vite';
 import { resolve } from 'node:path';
-import type { roundTrip, clearAndLoad, corruptObjectAndLoad } from './fixtures/project-storage-browser';
+import type { roundTrip, clearAndLoad, corruptObjectAndLoad, repairSameSizeCorruption } from './fixtures/project-storage-browser';
 
 let bundle: string;
 
@@ -73,4 +73,18 @@ test('missing content-addressed object fails restore instead of returning partia
   }, moduleUrl);
   expect(actual.removed).toMatch(/^[0-9a-f]{64}$/);
   expect(actual.error).toMatch(/missing|object|saved project/i);
+});
+
+
+test('saving repairs a same-size corrupted content-addressed object before committing the manifest', async ({ page, baseURL }) => {
+  const moduleUrl = await openHarness(page, baseURL!);
+  const actual = await page.evaluate(async moduleUrl => {
+    const harness = await import(moduleUrl) as { repairSameSizeCorruption: typeof repairSameSizeCorruption };
+    return harness.repairSameSizeCorruption();
+  }, moduleUrl);
+  expect(actual.corrupted).toMatch(/^[0-9a-f]{64}$/);
+  expect(actual.samples).toEqual([
+    { id: 'train-a', name: 'alpha.png', label: 0, split: 'train', synthetic: false, type: 'image/png', bytes: [1, 3, 5, 7] },
+    { id: 'test-b', name: 'beta.webp', label: 1, split: 'test', synthetic: true, type: 'image/webp', bytes: [2, 4, 6, 8, 10] },
+  ]);
 });
