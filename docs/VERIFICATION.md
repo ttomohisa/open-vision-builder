@@ -1,8 +1,8 @@
 # 検証計画とリリース判定
 
-更新日: 2026-10-24 JST
+更新日: 2026-10-25 JST
 
-状態: **分類と検出の最終ヘッドに部分結果あり。GridSample は修正後 PASS、検出の中間特徴量 G1 は FAIL。全体のリリースゲートは未完了。** 本書の合格条件は維持し、部分結果・失敗・未実施を区別する。[分類](verification/2026-10-24-browser-classification.md)、[モデル準備](verification/2026-10-24-model-preparation.md)、[GridSample 修正](verification/2026-10-24-grid-sample-correction.md)、[D-FINE 基礎検証](verification/2026-10-24-dfine-foundation.md) を参照する。
+状態: **分類の花写真・同条件 PyTorch・完全 ONNX の科学的比較は限定条件で PASS。ただし元 controller の通信検査 ERROR は保持する。GridSample は修正後 PASS、検出の中間特徴量 G1 は FAIL。全体のリリースゲートは未完了。** 本書の合格条件は維持し、部分結果・失敗・未実施を区別する。[分類の実画像結果](verification/2026-10-25-classification-real-images.md)、[従来の分類](verification/2026-10-24-browser-classification.md)、[モデル準備](verification/2026-10-24-model-preparation.md)、[GridSample 修正](verification/2026-10-24-grid-sample-correction.md)、[D-FINE 基礎検証](verification/2026-10-24-dfine-foundation.md) を参照する。
 
 PR #4 後の[追加調査メモ](verification/2026-10-24-dfine-prefix-investigation.md)には最終出力の不一致も記録されています。ただし、未 push の検証コードと生ログが失われており、このメモでゲートの合格範囲を追加しません。G1 は FAIL のままです。その後の[矩形1画像の新しい実行記録](verification/2026-10-25-rectangle-reproduction.md)はコードと JSON を保存しており、中間特徴の不一致を再現しました。これも品質・ブラウザ学習・モデル全体の合格を追加するものではありません。
 
@@ -28,15 +28,15 @@ PR #4 後の[追加調査メモ](verification/2026-10-24-dfine-prefix-investigat
 | ID | 判定対象 | 状態 |
 | --- | --- | --- |
 | G0 | ソース・重み・商用利用条件・変換履歴の固定 | PARTIAL: 分類 Small と検証用 Nano COCO の正確な safetensors・コード・Apache 表示・変換記録を固定。検出は製品未採用 |
-| G1 | 元実装とブラウザーの forward 一致 | PARTIAL / detector FAIL: 旧中間特徴の失敗を維持。実画像の own-path 比較では tuning 2画像の最終 logits/boxes も学習前後とも条件外 |
+| G1 | 元実装とブラウザーの forward 一致 | PARTIAL / detector FAIL: 分類の花写真50枚で元特徴・logitsの比較が条件内。検出の旧中間特徴の失敗と、own-path tuning 2画像の学習前後 logits/boxes 条件外は維持 |
 | G2 | 学習パラメーターへの勾配と実更新 | PARTIAL: 分類ヘッド、修正 GridSample の値/両勾配、同一特徴での最終 pretrained bbox/class ヘッドの全勾配・SGD を確認。完全 detector backprop は未実施 |
-| G3 | 少量データへの過適合と事前学習済み位置推定の更新 | PARTIAL: 検出の pretrained 位置重み更新を実画像12 stepでも確認。ただし両実装の損失改善は約0.004%で1%基準に未達、少量過適合は未認定 |
-| G4 | 独自タスクの未使用データ評価と公平な PyTorch 比較 | PARTIAL evidence / NOT QUALIFIED: 検出の公開COCO10画像で同条件比較を実施。両実装の損失改善が事前1%基準に未達。独自タスク・分類実画像・一般化品質は未認定 |
+| G3 | 少量データへの過適合と事前学習済み位置推定の更新 | PARTIAL: 分類の固定 backbone と head 学習は browser/native とも train30/30、CE約82.9474%改善。検出の位置重み更新は確認したが、実画像12 stepの両実装の損失改善は約0.004%で1%基準未達、検出の少量過適合は未認定 |
+| G4 | 独自タスクの未使用データ評価と公平な PyTorch 比較 | PARTIAL evidence / NOT QUALIFIED: 花5クラスの同条件比較は両実装とも評価15/20、macro F1 0.7504761905で限定条件内。元 controller ERROR を別記。検出の学習改善未達、幅広い独自タスク・一般化品質・G4全体は未認定 |
 | G5 | クラス数・空画像・画像形状の境界条件 | PARTIAL: 分類の入力/shape/class/取消。検出の空/単一/複数 target・矩形割当・disjoint GIoU 勾配・不正入力・取消を検証。独自クラスは未実施 |
-| G6 | 学習後の完全 FP32 ONNX と独立した推論一致 | PARTIAL / real-image detector FAIL: 新しい検出出力は fresh browser 10/10一致、Python CPU は2/10不一致。旧合成fixtureの部分成功・G1 FAILを維持。edgeは未検証 |
+| G6 | 学習後の完全 FP32 ONNX と独立した推論一致 | PARTIAL / real-image detector FAIL: 分類の完全 ONNX は花写真50枚の fresh browser / Python CPU 比較が各50/50条件内。検出は fresh browser 10/10一致、Python CPU 2/10不一致とG1 FAILを維持。edgeは未検証 |
 | G7 | キャッシュ・非公開状態・隠れた通信への非依存 | PARTIAL: 分類と検出出力を別 CPU runtime で推論。kit はモデル追加取得・変換なし。全対応環境の認定は未完了 |
 | G8 | 実機での時間・メモリー・中断・保存・再開 | PARTIAL: CI相当 Linux の経過時間と取消のみ。対象 PC・メモリ・再開は NOT RUN |
-| G9 | データ非送信と再現可能な証拠の確認 | PARTIAL: 合成 fixture の E2E 通信観測・依存固定。製品全体の確認は未完了 |
+| G9 | データ非送信と再現可能な証拠の確認 | PARTIAL: 合成 fixture の E2E 通信観測・依存固定。花写真試験の元 controller は同一 origin の任意 build-info GET 一件で ERROR。科学的比較 PASS で通信検査の元失敗を消さず、製品全体の確認は未完了 |
 
 全ゲートの証拠を揃えるまで、製品全体を「ブラウザーで学習可能」「ONNX 対応済み」「リリース可能」としない。部分実装について述べる場合は、分類 Small の固定特徴 + ヘッド、検出 Nano の既存80クラス最終ヘッド、WASM、公開 fixture、検証環境など実際の範囲を付記する。CI の部品検証成功は G1 FAIL を解消しない。厳格な検出準備コマンドの非0終了と、全比較の失敗レポートを保存する。
 
@@ -156,3 +156,9 @@ jax-js の ONNX ローダーは initializer を内部に保持するため、学
 上記 URL の実装確認と本プロジェクトでの動作検証は別である。実行時には参照 commit を固定する。
 
 2026-10-25 の [実画像 own-prefix 比較](verification/2026-10-25-own-prefix-impact.md)は、同一特徴対照の成功と、学習改善条件・Python export の未達を保存した。条件・画像・分割を結果へ合わせて変更せず一回の完全測定で終了した。旧 G1 FAIL と完全 ONNX 必須の製品要件は維持する。
+
+同日の [分類実画像比較](verification/2026-10-25-classification-real-images.md)は、[PR #7](https://github.com/ttomohisa/open-vision-builder/pull/7) の事前登録 commit `261fcc70c4d795963349bb1f15d1fd816e4fe1f7` の条件を維持して一回だけ実行した。[比較証拠](verification/evidence/2026-10-25-classification-real-images.json)の科学的判定は `completed` / PASS、数値323/323件・品質条件が合格で、完全 ONNX は固定 initializer92個・node88個の不変と head6,405パラメーターを確認した。tuning10枚は使用していない。
+
+**元の `status.json` は ERROR のまま保存する。** 科学的比較を保存した後、アプリが任意で読む同一 origin の `GET /open-vision-builder/build-info.json` 一件が strict harness の許可対象外となった。ローカル build にはこの CI 生成メタデータがない。`comparison.json` の PASS を controller 全体の正常終了や G9 全体の合格へ読み替えない。修正後はモデルを実行しない preflight で実際のローカル404応答を確認し、RED→GREEN を記録した。元の一回の結果・条件・エラーは変更していない。
+
+[初回 CI 40151378784](https://github.com/ttomohisa/open-vision-builder/actions/runs/40151378784) では、ONNX 再生成値が歴史的な `28857aef…` となり、実測 artifact `eb823aa2…` を要求する分類 `--check` が失敗した。60画像の再現とモデルの既存生成 fixture 一致は成功したが、bytes の相違の原因や数値的同一性をこの事実だけから推測しない。元の実験 plan/hash/許容差と通常実行・`--check` の厳密な artifact 条件を維持する。CI は非測定モード `--check-app` を使い、artifact 自身の manifest/hash、同じ checkpoint/revision、dist の整合と App/helper 起動だけを確認する。`measurementModelMatches=false` の起動成功を実験の再現・G1/G4/G6 の追加合格として扱わない。最新コミットの CI 判定は [PR #7](https://github.com/ttomohisa/open-vision-builder/pull/7) に記録する。

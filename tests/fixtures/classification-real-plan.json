@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "classification-flowers-60-v1",
+  "scope": "classifier-head-only-public-flowers-v1",
+  "datasetManifestSha256": "7d6885edda14c5e08b9a138d5f56ad9ab15b4d9ce3214b1d2befd9ceb5f80805",
+  "model": {
+    "id": "timm/mobilenetv4_conv_small.e2400_r224_in1k",
+    "sourceRevision": "331fb803779522b685cf942e15f914fb6741c1eb",
+    "checkpointSha256": "7a7102ec18f62bbfb555b6fe829bbb5af749516b84174926c29ffdfdfc03aec4",
+    "onnxSha256": "eb823aa24c3d3308ae8e3d65074634aa96800831bb238114207315a79d540e8a"
+  },
+  "classes": ["daisy", "dandelion", "roses", "sunflowers", "tulips"],
+  "splits": {"train": 30, "tuning": 10, "evaluation": 20},
+  "training": {
+    "featureSize": 1280,
+    "classes": 5,
+    "epochs": 40,
+    "learningRate": 0.01,
+    "batchSize": 30,
+    "initialization": "zeros",
+    "optimizer": "sgd",
+    "momentum": 0,
+    "weightDecay": 0,
+    "shuffle": false,
+    "augmentation": false,
+    "backend": "wasm"
+  },
+  "preprocessing": {
+    "encodedInput": "canonical-rgba-png",
+    "size": 224,
+    "resize": "bilinear-half-pixel-stretch",
+    "mean": [0.485, 0.456, 0.406],
+    "std": [0.229, 0.224, 0.225],
+    "layout": "NCHW",
+    "dtype": "float32"
+  },
+  "tolerances": {"atol": 0.0002, "rtol": 0.0001, "inputMaxAbsoluteExclusive": 0.000001},
+  "criteria": {
+    "minimumTrainLossReduction": 0.2,
+    "minimumTrainAccuracy": 0.9,
+    "minimumEvaluationAccuracy": 0.7,
+    "maximumEvaluationAccuracyGap": 0.05,
+    "maximumEvaluationMacroF1Gap": 0.05
+  },
+  "budget": {"maxCompletedRuns": 1, "maxRuntimeSeconds": 600, "maxActiveWorkMinutes": 90, "automaticRetries": 0},
+  "releaseReady": false
+}

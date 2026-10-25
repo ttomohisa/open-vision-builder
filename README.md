@@ -21,7 +21,9 @@ A browser-based vision model builder for image classification and object detecti
 
 その後の[公開実画像10枚・12 stepの比較](docs/verification/2026-10-25-own-prefix-impact.md)でも、両実装の損失改善は事前条件に届きませんでした。完全 ONNX の fresh browser 一致は10/10画像、Python CPU 一致は8/10画像で、2画像の不一致を保持しています。検出器の製品採用を認定する結果ではありません。
 
-独自クラスの検出、WebGPU、バックボーンの Fine-tuning、実データでの品質、ピークメモリ、保存・再開は未対応または未検証です。生成サンプルの正解率は実画像の品質を示しません。ページを閉じると作業中のデータは失われるため、必要なモデルは先にダウンロードしてください。
+分類の[公開写真での一回の比較](docs/verification/2026-10-25-classification-real-images.md)では、ブラウザ・独立 PyTorch とも学習30/30、評価15/20（75%）、評価 macro F1 0.7504761905でした。完全 ONNX の fresh browser / Python 比較は各50/50画像で条件内です。**科学的比較は PASS ですが、元 controller は比較完了後に任意メタデータ GET を未許可と判定して ERROR 終了しており、その失敗を保存しています。**
+
+独自クラスの検出、WebGPU、バックボーンの Fine-tuning、幅広い実データでの品質、ピークメモリ、保存・再開は未対応または未検証です。花5クラスの限定結果や生成サンプルの正解率を製品全体の品質保証には使いません。ページを閉じると作業中のデータは失われるため、必要なモデルは先にダウンロードしてください。
 
 [分類の実測](docs/verification/2026-10-24-browser-classification.md)・[検出の部分結果と未解決ゲート](docs/verification/2026-10-24-dfine-foundation.md)・[現在の状態](docs/STATUS.md)に、確認した範囲と残課題を記録しています。
 
@@ -94,7 +96,41 @@ npm run test:browser
 
 `dist/` は静的配信できます。GitHub Pages 用 CI・公開 workflow と Cloudflare 用の設定は [DEPLOYMENT](docs/DEPLOYMENT.md) を参照してください。Pages の初回設定と実際の公開確認は別工程です。公開確認前の URL はプレビューとして案内しません。
 
-### 公開実画像での限定した学習影響比較（開発者用）
+### 分類の実画像品質・同条件 PyTorch 比較（開発者用）
+
+[固定した設計](docs/superpowers/specs/2026-10-25-classification-real-images-design.md)と[実行計画](docs/superpowers/plans/2026-10-25-classification-real-images.md)を [PR #7](https://github.com/ttomohisa/open-vision-builder/pull/7)、commit `261fcc70c4d795963349bb1f15d1fd816e4fe1f7` で公開後、一回の科学的比較を完了しました。[結果と元 controller の失敗](docs/verification/2026-10-25-classification-real-images.md)を分けて記録しています。[出典・利用条件・選択規則](docs/verification/2026-10-25-classification-data.md)を固定した5クラス60枚から、30枚を学習、20枚を評価に使い、調整用の10枚は使用していません。最新コミットの CI 判定は PR に記録します。
+
+**`comparison.json` は数値・品質条件とも PASS、元 `status.json` は ERROR です。** 比較保存後の通信検査で、アプリが任意に読む同一 origin の `GET /open-vision-builder/build-info.json` 一件を未許可と判定しました。このメタデータは CI が追加する一方、通常のローカル build にはありません。harness の扱いを修正し、実際のローカル404応答を通す推論しない事前確認で RED→GREEN を確認しました。controller 全体が正常終了したとは表記せず、元エラーを保持しています。修正のために学習・モデル推論は再実行していません。
+
+上記の依存関係・公開モデル・Chromium を準備した開発環境で、データ再現と推論しない事前確認を実行します。
+
+```bash
+.venv/bin/python scripts/prepare_classification_data.py
+npm run build
+node scripts/run_classification_real.mjs --check
+```
+
+`--check` は実測に使った固定 artifact・入力 bytes・bundle・App/helper の起動を確認し、画像のモデル推論や学習は行いません。通常実行と同じ ONNX hash に厳密に一致する必要があります。
+
+[初回 CI](https://github.com/ttomohisa/open-vision-builder/actions/runs/40151378784) では、再生成 ONNX が過去記録の `28857aef…` となり、実測・配信中の `eb823aa2…` に固定した strict `--check` が失敗しました。データ60枚の再現とモデルの既存生成 fixture 比較は成功していますが、異なる bytes の原因は未確定です。実験の plan/hash/許容差は変更しません。
+
+CI は別の非測定モード `--check-app` を使います。CI が生成した artifact 自身の manifest/hash、同じ checkpoint/revision、dist との一致を検査し、実際の App/helper を起動するだけで、画像のモデル推論・学習を行いません。
+
+```bash
+node scripts/run_classification_real.mjs --check-app
+```
+
+出力には実際の `sourceModelSha256`、固定した `measurementModelSha256` と一致判定 `measurementModelMatches` を含みます。実測 artifact と異なる場合は `measurementModelMatches=false` を表示します。この起動確認は元の科学的比較の再現や数値合格を示しません。最新コミットの CI 判定は PR を参照してください。実験を検証する strict `--check` の代わりとして扱いません。
+
+次は既に一回実行した比較のコマンドです。通常の確認や controller 修正の検証では再実行しません。
+
+```bash
+node scripts/run_classification_real.mjs
+```
+
+既定の40 full-batch SGD updates、learning rate 0.01 をブラウザと独立 PyTorch で比較し、完全 ONNX を別 browser context と Python で読み直しました。10分の上限内で測定を終え、既存の `artifacts/p1e/run/` と controller の失敗を保持しています。画像・設定・判定条件の変更や自動再試行はしません。対象は canonical PNG、Small の固定 backbone と分類ヘッド、WASM の限定比較です。一般の JPEG decode、WebGPU、検出、製品リリースの認定は含めません。次は分類のローカル保存・復元、資源量、中断・再開を進めます。
+
+### 検出の公開実画像での限定した学習影響比較（開発者用）
 
 [事前登録した計画](docs/superpowers/plans/2026-10-25-dfine-own-prefix-impact.md)に従い、各 runtime 自身の frozen-prefix 特徴を使う12 step の比較を行うコードを用意しています。[画像・注釈・分割・利用条件](docs/verification/2026-10-25-impact-data.md)を固定し、同じ特徴・重みの対照が失敗した場合は停止します。
 
