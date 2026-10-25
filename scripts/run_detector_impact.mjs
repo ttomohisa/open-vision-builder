@@ -8,7 +8,7 @@ import { parseArgs, promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { chromium } from '@playwright/test';
-import { ImpactProgress, validateImpactPlan } from './detector-impact-state.mjs';
+import { ImpactProgress, validateImpactPlan, remainingTimeoutMs } from './detector-impact-state.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const { values: args } = parseArgs({ options: {
@@ -79,7 +79,7 @@ async function main() {
     let exitCode = 0, stdout = '', stderr = '';
     try {
       ({ stdout, stderr } = await exec(args.python, [resolve(root, 'scripts', script), ...common, ...extra],
-        { cwd: root, timeout: Math.max(1, plan.budget.runtimeMinutes * 60_000 - (performance.now() - runtimeStart)), maxBuffer: 1024 * 1024 }));
+        { cwd: root, timeout: remainingTimeoutMs(runtimeStart + plan.budget.runtimeMinutes * 60_000, performance.now()), maxBuffer: 1024 * 1024 }));
     } catch (error) {
       if (typeof error.code !== 'number') throw error;
       exitCode = error.code; stdout = error.stdout ?? ''; stderr = error.stderr ?? '';

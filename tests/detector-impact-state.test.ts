@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ImpactProgress, validateImpactPlan } from '../scripts/detector-impact-state.mjs';
+import { ImpactProgress, validateImpactPlan, remainingTimeoutMs } from '../scripts/detector-impact-state.mjs';
 import plan from './fixtures/detector-impact-plan.json';
 
 describe('bounded detector experiment controller', () => {
+  it('provides an integer child-process timeout from a fractional monotonic clock', () => {
+    expect(remainingTimeoutMs(900000, 4933.208427)).toBe(895066);
+    expect(() => remainingTimeoutMs(900000, 900000.5)).toThrow(/budget/);
+  });
   it('refuses updates before each successful same-feature control', () => {
     const state = new ImpactProgress(['a', 'b', 'c', 'd']);
     expect(() => state.acceptStep(0, 'a')).toThrow(/control/);

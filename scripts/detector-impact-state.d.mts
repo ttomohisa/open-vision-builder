@@ -1,4 +1,5 @@
 export function validateImpactPlan(value: unknown, manifestSha256: string): void;
+export function remainingTimeoutMs(deadline: number, now: number): number;
 export class ImpactProgress {
   constructor(trainIds: string[]);
   recordControl(step: number, passed: boolean): void;

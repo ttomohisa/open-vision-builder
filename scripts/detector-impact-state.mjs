@@ -1,4 +1,10 @@
 // Developer experiment sequencing, independent of model/runtime arithmetic.
+export function remainingTimeoutMs(deadline, now) {
+  const remaining = Math.floor(deadline - now);
+  if (!Number.isSafeInteger(remaining) || remaining < 1) throw new Error('Experiment runtime budget exhausted');
+  return remaining;
+}
+
 export function validateImpactPlan(plan, manifestSha256) {
   if (!plan || plan.schemaVersion !== 1 || plan.id !== 'dfine-coco-own-prefix-impact-v1') throw new Error('Unknown impact plan');
   if (!/^[a-f0-9]{64}$/.test(manifestSha256) || plan.datasetManifestSha256 !== manifestSha256) throw new Error('Dataset digest is not bound');
