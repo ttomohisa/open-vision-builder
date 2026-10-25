@@ -65,9 +65,15 @@ P1a は分類の固定バックボーン + ヘッド更新です。P1b の部分
 
 2026-10-25 の方針点検で、予定していた decoder 全体の同一入口 replay は保留しました。PR #5 は保存済み診断の範囲で区切り、次は各実行系自身の特徴を使う学習・出力への影響を優先します。詳細は [ADR 0005](docs/decisions/0005-bound-numerical-investigation.md)。
 
-その後、[PR #6 の実画像比較](docs/verification/2026-10-25-own-prefix-impact.md)を一回完了しました。同一特徴対照は通りましたが、両実装の学習改善が1%基準に届かず、Python export は2画像で不一致でした。条件未達を保持してこの実験は終了です。次は分類の実画像品質を独立して進めます。検出の追加試験や数値調査を自動的に継続せず、STATUS の次作業と ADR 0005 に従ってください。
+その後、[PR #6 の実画像比較](docs/verification/2026-10-25-own-prefix-impact.md)を一回完了しました。同一特徴対照は通りましたが、両実装の学習改善が1%基準に届かず、Python export は2画像で不一致でした。条件未達を保持してこの実験は終了です。検出の追加試験や数値調査を自動的に継続せず、STATUS の次作業と ADR 0005 に従ってください。
 
 `prepare_detector_impact_data.py` は固定公開画像の再現、`node scripts/run_detector_impact.mjs --check` は推論しない事前確認です。引数なしは既に完了した12 step実験を実行するため、単体テストの代わりに毎回起動しません。画像・大きな raw tensor・モデルは ignored artifacts、比較集計と評価検出結果は上記記録に保存します。
+
+[PR #7 の分類実画像比較](docs/verification/2026-10-25-classification-real-images.md)も、事前登録 commit `261fcc70c4d795963349bb1f15d1fd816e4fe1f7` の条件で一回の科学的比較を完了しました。ブラウザと独立 PyTorch はともに train 30/30、evaluation 15/20、macro F1 0.7504761905。完全 ONNX は fresh browser と Python の各50画像で比較条件内です。**ただし元 controller は比較保存後、同一 origin の任意メタデータ GET `/open-vision-builder/build-info.json` を未許可と判定して ERROR 終了しました。科学的比較の PASS と controller の ERROR を併記し、元の失敗記録を消しません。**
+
+`python scripts/prepare_classification_data.py` と `node scripts/run_classification_real.mjs --check` はデータ準備・推論しない事前確認です。引数なしの分類実験は既に一回実行済みで、controller 修正の確認や通常のテストのためにモデル学習・推論を再実行しません。計画・画像・レシピ・判定条件は変更しません。分類の次作業はローカル保存・復元、対象環境の資源量、中断・再開の確認であり、検出調査の自動延長ではありません。花5クラス・固定 backbone とヘッド学習・canonical PNG・WASM の部分結果として扱い、G4 全体やリリースを認定しません。
+
+PR #7 の初回 CI は分類の strict `--check` で停止しました。CI が再生成した ONNX は過去記録と同じ `28857aef…`、実測・配信中の artifact は `eb823aa2…` です。同じ checkpoint/revision の生成 fixture 比較とデータ60枚の再現は成功しましたが、異なる bytes の原因は未確定です。実験の固定 hash を変えて CI を通しません。CI が使う `--check-app` は、CI artifact 自身の manifest/hash・checkpoint/revision・dist 整合と App/helper の起動だけを確認する別の非測定モードです。`measurementModelMatches=false` を明示する場合があり、元実験の再現・数値合格を意味しません。通常実行と `--check` は元の固定 artifact に対して strict のままです。最新コミットの CI 判定とマージ状況は [PR #7](https://github.com/ttomohisa/open-vision-builder/pull/7) を参照してください。
 
 ## PR とマージ
 

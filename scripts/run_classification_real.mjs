@@ -9,13 +9,14 @@ import { parseArgs, promisify } from 'node:util';
 import { build } from 'vite';
 import { chromium } from '@playwright/test';
 import { unzipSync } from 'fflate';
-import { extractExportedHead, reserveOutput, validatePlan, validateWorkerRequest, validateWorkerRun } from './classification-real-state.mjs';
+import { extractExportedHead, reserveOutput, validatePlan, validatePreparedArtifact, validateWorkerRequest, validateWorkerRun } from './classification-real-state.mjs';
 import { installWorkerObserver } from './classification-worker-observer.mjs';
 import { remainingTimeoutMs } from './detector-impact-state.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const { values: args } = parseArgs({ options: {
   check: { type: 'boolean', default: false }, chromium: { type: 'string' },
+  'check-app': { type: 'boolean', default: false },
   python: { type: 'string', default: resolve(root, '.venv/bin/python') },
   images: { type: 'string', default: resolve(root, 'artifacts/p1e/data/images') },
   output: { type: 'string', default: resolve(root, 'artifacts/p1e/run') },
@@ -42,6 +43,7 @@ async function writeJson(path, value) {
 }
 
 async function main() {
+  if (args.check && args['check-app']) throw new Error('Choose strict experiment preflight or app-startup-only check');
   const [planBytes, dataBytes] = await Promise.all([readFile(planPath), readFile(dataPath)]);
   const plan = JSON.parse(planBytes), data = JSON.parse(dataBytes);
   const planSha256 = sha(planBytes), datasetManifestSha256 = sha(dataBytes);
@@ -50,11 +52,11 @@ async function main() {
   if (!/^\/[a-zA-Z0-9_/-]+\/$/.test(prefix) || prefix.includes('//')) throw new Error('Invalid static base path');
   const prepared = await json(resolve(dirname(sourceModel), 'model.json'));
   const sourceBytes = await readFile(sourceModel);
-  if (sha(sourceBytes) !== plan.model.onnxSha256 || prepared.artifact.sha256 !== plan.model.onnxSha256 ||
-      prepared.source.sha256 !== plan.model.checkpointSha256 || prepared.source.revision !== plan.model.sourceRevision) throw new Error('Prepared model differs from fixed plan');
-  if (sha(await readFile(resolve(root, 'dist/models/mobilenetv4-small/backbone.onnx'))) !== plan.model.onnxSha256) throw new Error('Build contains a different source model; rebuild first');
+  const actualSourceModelSha256 = sha(sourceBytes);
+  validatePreparedArtifact(prepared, actualSourceModelSha256, sha(await readFile(resolve(root, 'dist/models/mobilenetv4-small/backbone.onnx'))),
+    plan, args['check-app'] ? 'app-startup' : 'experiment');
   const resources = new Map();
-  function add(path, bytes, type = mime(path)) { resources.set(path, { bytes, type }); }
+  function add(path, bytes, type = mime(path), status = 200) { resources.set(path, { bytes, type, status }); }
   async function addDist(directory, relative = '') {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = resolve(directory, entry.name), name = `${relative}${entry.name}`;
@@ -67,6 +69,9 @@ async function main() {
   const index = resources.get(`${prefix}index.html`);
   if (!index) throw new Error('Missing built App');
   resources.set(prefix, index);
+  // CI supplies this metadata; ordinary local builds legitimately omit it.
+  // Allow only the App's exact optional path, preserving a real 404 response.
+  if (!resources.has(`${prefix}build-info.json`)) add(`${prefix}build-info.json`, '', 'application/json', 404);
   add('/favicon.ico', Buffer.alloc(0), 'image/x-icon');
   for (const item of images) {
     const bytes = await readFile(resolve(args.images, `${item.id}.png`));
@@ -98,7 +103,7 @@ async function main() {
       if (request.method !== 'GET' || !resource) {
         unexpectedRequests.push(`${request.method} ${path}`); response.writeHead(404).end(); return;
       }
-      response.writeHead(200, { 'Content-Type': resource.type, 'Cache-Control': 'no-store' }).end(resource.bytes);
+      response.writeHead(resource.status, { 'Content-Type': resource.type, 'Cache-Control': 'no-store' }).end(resource.bytes);
     });
     await new Promise((done, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', done); });
     const origin = `http://127.0.0.1:${server.address().port}`, baseUrl = `${origin}${prefix}`;
@@ -120,13 +125,20 @@ async function main() {
       return ctx;
     }
     const training = await context('training'), page = await training.newPage();
-    if (args.check) {
+    if (args.check || args['check-app']) {
+      // Exercise the real App's startup requests without starting a model.
+      const metadataRequest = page.waitForRequest(`${baseUrl}build-info.json`);
+      await page.goto(baseUrl);
+      const metadataResponse = await (await metadataRequest).response();
       await page.goto(`${baseUrl}__classification/`);
       await page.evaluate(async url => { await import(url); }, moduleUrl);
       if (unexpectedRequests.length || pageErrors.length) throw new Error('Preflight network/page failure');
-      console.log(JSON.stringify({ status: 'preflight-passed', browser: browser.version(), planSha256, datasetManifestSha256,
-        sourceModelSha256: plan.model.onnxSha256, images: images.length,
-        note: 'Fixed bytes, bundle and browser module import only. No image model inference or training.' }));
+      console.log(JSON.stringify({ status: args['check-app'] ? 'app-startup-passed' : 'preflight-passed', browser: browser.version(), planSha256, datasetManifestSha256,
+        sourceModelSha256: actualSourceModelSha256, measurementModelSha256: plan.model.onnxSha256,
+        measurementModelMatches: actualSourceModelSha256 === plan.model.onnxSha256,
+        images: images.length, buildMetadataStatus: metadataResponse?.status() ?? null,
+        note: args['check-app'] ? 'App startup and helper import only; no model execution or measurement artifact qualification.' :
+          'Fixed bytes, App startup, bundle and browser module import only. No image model inference or training.' }));
       return;
     }
     await reserveOutput(output); active = true; started = performance.now();

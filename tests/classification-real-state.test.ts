@@ -6,10 +6,24 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import planValue from './fixtures/classification-real-plan.json';
 import dataValue from './fixtures/classification-real-data.json';
-import { extractExportedHead, reserveOutput, validatePlan, validateWorkerRun } from '../scripts/classification-real-state.mjs';
+import { extractExportedHead, reserveOutput, validatePlan, validatePreparedArtifact, validateWorkerRun } from '../scripts/classification-real-state.mjs';
 
 describe('fixed real-image classification experiment boundaries', () => {
   const dataHash = planValue.datasetManifestSha256;
+  it('keeps experiment model identity strict while app-only checks still reject corrupt assets and changed sources', () => {
+    const measured = planValue.model.onnxSha256, other = '0'.repeat(64);
+    const prepared = { artifact: { sha256: measured }, source: { sha256: planValue.model.checkpointSha256, revision: planValue.model.sourceRevision } };
+    expect(() => validatePreparedArtifact(prepared, measured, measured, planValue)).not.toThrow();
+    const rebuilt = { ...prepared, artifact: { sha256: other } };
+    expect(() => validatePreparedArtifact(rebuilt, other, other, planValue)).toThrow(/measurement/);
+    expect(() => validatePreparedArtifact(rebuilt, other, other, planValue, 'app-startup')).not.toThrow();
+    for (const mode of ['experiment', 'app-startup'] as const) {
+      expect(() => validatePreparedArtifact(prepared, other, other, planValue, mode)).toThrow();
+      expect(() => validatePreparedArtifact(prepared, measured, other, planValue, mode)).toThrow();
+      expect(() => validatePreparedArtifact({ ...prepared, source: { ...prepared.source, sha256: other } }, measured, measured, planValue, mode)).toThrow();
+      expect(() => validatePreparedArtifact({ ...prepared, source: { ...prepared.source, revision: other } }, measured, measured, planValue, mode)).toThrow();
+    }
+  });
   it('binds the fixed recipe and data before accepting a run', () => {
     expect(validatePlan(structuredClone(planValue), dataValue, dataHash)).toHaveLength(50);
     for (const mutate of [

@@ -9,6 +9,15 @@ const hash = value => typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
 function require(condition, message) { if (!condition) throw new Error(message); }
 function same(actual, expected, name) { require(isDeepStrictEqual(actual, expected), `Changed ${name}`); }
 
+export function validatePreparedArtifact(prepared, modelSha256, builtSha256, plan, mode = 'experiment') {
+  require(mode === 'experiment' || mode === 'app-startup', 'Unknown asset verification mode');
+  require(hash(modelSha256) && prepared.artifact?.sha256 === modelSha256 && builtSha256 === modelSha256,
+    'Prepared model manifest/build hash mismatch');
+  require(prepared.source?.sha256 === plan.model.checkpointSha256 && prepared.source.revision === plan.model.sourceRevision,
+    'Prepared checkpoint source differs from fixed plan');
+  if (mode === 'experiment') require(modelSha256 === plan.model.onnxSha256, 'Prepared model differs from fixed measurement artifact');
+}
+
 export function validatePlan(plan, manifest, manifestSha256) {
   require(plan.schemaVersion === 1 && plan.id === 'classification-flowers-60-v1' && plan.releaseReady === false, 'Unsupported experiment');
   require(hash(manifestSha256) && plan.datasetManifestSha256 === manifestSha256, 'Dataset manifest hash mismatch');

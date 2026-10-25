@@ -23,7 +23,11 @@ P1a では MobileNetV4 Conv Small の固定特徴 + 分類ヘッドの学習、�
 
 2026-10-25 の再開時点では PR #4 はマージ済みです。その後の未 push 調査コードと生ログが自動整理で失われたため、[追加調査の復元メモ](verification/2026-10-24-dfine-prefix-investigation.md)と [ADR 0004](decisions/0004-dfine-investigation-checkpoint.md)を保存しました。続けて[矩形1画像の再現](verification/2026-10-25-rectangle-reproduction.md)と [decoder の局所診断](verification/2026-10-25-decoder-localization.md)を PR #5 に保存しました。中間特徴は不一致のままです。[ADR 0005](decisions/0005-bound-numerical-investigation.md) に従い、この診断で PR を区切り、次は各実行系自身の特徴を使う学習・出力への影響を優先します。分類の実データ品質確認は P1 内で独立して進めます。失われた大きな検証基盤の全面再構築や、全演算の数値差の説明を、その前提にはしません。
 
-PR #5 のマージ後、[PR #6 の公開実画像比較](verification/2026-10-25-own-prefix-impact.md)を完了しました。同一特徴の対照と学習中の損失・勾配・更新は比較条件内でしたが、両実装の学習改善は約0.004%で1%基準に届かず、Python export は2画像で不一致でした。この実験は終了し、次の独立した P1 作業は**分類の実画像品質と同条件 PyTorch 比較**です。検出は限定レシピ・学習量・データ適合性の見直しと、既知の export 不一致を残課題とし、新たな試験は別の事前登録・上限を必要とします。
+PR #5 のマージ後、[PR #6 の公開実画像比較](verification/2026-10-25-own-prefix-impact.md)を完了しました。同一特徴の対照と学習中の損失・勾配・更新は比較条件内でしたが、両実装の学習改善は約0.004%で1%基準に届かず、Python export は2画像で不一致でした。この実験は終了です。検出は限定レシピ・学習量・データ適合性の見直しと、既知の export 不一致を残課題とし、新たな試験は別の事前登録・上限を必要とします。
+
+続く [PR #7 の分類実画像比較](verification/2026-10-25-classification-real-images.md)は、一回の科学的比較を完了しました。花5クラスの固定 backbone と head 学習では browser / native とも train 30/30、evaluation 15/20、macro F1 0.7504761905で、完全 ONNX の fresh browser / Python 比較は各50/50画像が条件内です。**元 controller は比較保存後の任意メタデータ GET `/open-vision-builder/build-info.json` の扱いで ERROR 終了しており、科学的比較の PASS と区別して保持します。** harness と推論しない事前確認を修正済みで、モデルの学習・推論は再実行していません。初回 CI の artifact hash 不一致と後続の確認範囲は [STATUS](STATUS.md)、最新 CI 判定は PR に記録します。
+
+分類の次の実装は、**ローカル保存・復元・バックアップと、対象環境の資源量・中断・再開**です。限定した品質結果を根拠に、P1 の資源・継続性確認と P2 の分類プロジェクト保存を小さい単位で進めます。P1 全体の完了、G4 全体、一般の JPEG decode、WebGPU、検出、製品リリースを認定したものではありません。検出の追加診断をこの次作業へ自動的に含めません。
 
 最初は MobileNetV4 Conv Small と D-FINE Nano を使って経路を検証し、品質を重視した Medium / Small の候補へ進めます。候補の変更はモデル名だけで判断せず、[MODELS](MODELS.md) の条件と [VERIFICATION](VERIFICATION.md) の結果に基づけます。
 

@@ -264,10 +264,10 @@ jobs:
           artifacts/p1b/.venv-detector/bin/python scripts/prepare_detector_impact_data.py
           node scripts/run_detector_impact.mjs --check
 
-      - name: Prepare fixed classification photos and preflight without model inference
+      - name: Prepare fixed classification photos and check App startup without model inference
         run: |
           python scripts/prepare_classification_data.py
-          node scripts/run_classification_real.mjs --check
+          node scripts/run_classification_real.mjs --check-app
 
       - name: Verify the browser training and full ONNX export
         run: npm run test:browser
