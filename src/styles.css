@@ -293,3 +293,8 @@ progress::-moz-progress-bar { background: #13918d; border-radius: 8px; }
 /* Explicit project backup is independent of the inference-model download. */
 .project-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 18px; }
 .project-actions > span { font-size: 11px; line-height: 1.7; color: var(--muted); flex-basis: 100%; }
+
+/* Local autosave status is informational; portable ZIP backups remain explicit. */
+.local-storage-status { margin: 5px 0 18px; padding: 11px 13px; background: #f2f7f6; border: 1px solid #d8e8e3; border-radius: 8px; color: #405b60; font-size: 12px; line-height: 1.7; }
+.local-storage-status .storage-usage { margin-top: 4px; font-size: 11px; color: #637a82; }
+.local-storage-status .text-button { margin-top: 5px; }

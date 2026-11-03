@@ -75,6 +75,10 @@ P1a は分類の固定バックボーン + ヘッド更新です。P1b の部分
 
 PR #7 の初回 CI は分類の strict `--check` で停止しました。CI が再生成した ONNX は過去記録と同じ `28857aef…`、実測・配信中の artifact は `eb823aa2…` です。同じ checkpoint/revision の生成 fixture 比較とデータ60枚の再現は成功しましたが、異なる bytes の原因は未確定です。実験の固定 hash を変えて CI を通しません。CI が使う `--check-app` は、CI artifact 自身の manifest/hash・checkpoint/revision・dist 整合と App/helper の起動だけを確認する別の非測定モードです。`measurementModelMatches=false` を明示する場合があり、元実験の再現・数値合格を意味しません。通常実行と `--check` は元の固定 artifact に対して strict のままです。最新コミットの CI 判定とマージ状況は [PR #7](https://github.com/ttomohisa/open-vision-builder/pull/7) を参照してください。
 
+## 分類プロジェクト保存の境界（PR #9/#10）
+
+PR #9の`src/project-backup.ts`によるZIPは他のブラウザ/端末へ運ぶ手動バックアップです。PR #10の`src/local-draft.ts`によるIndexedDBは同一originでの一時的な作業自動保存で、単一レコード・SHA-256検証・revision競合検知を実装しています。保存成功前の強制終了、サイトデータ消去・eviction時の復旧は保証しません。元の画像/設定は保存しますが、学習済みONNX・optimizer・途中checkpointを保存したとは扱いません。OPFSは未実装であり、実機の容量/メモリ計測と必要性の評価を先に進めます。既存の検出G1 FAILや分類のcontroller ERRORを保存機能の成功で上書きしません。実測範囲は[PR #10](https://github.com/ttomohisa/open-vision-builder/pull/10)と[計画](docs/superpowers/plans/2026-11-03-local-autosave.md)に従ってください。
+
 ## PR とマージ
 
 - 作業ごとに専用ブランチを用い、`main` へ直接変更を push しない。

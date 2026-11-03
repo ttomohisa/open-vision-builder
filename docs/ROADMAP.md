@@ -27,7 +27,7 @@ PR #5 のマージ後、[PR #6 の公開実画像比較](verification/2026-10-25
 
 続く [PR #7 の分類実画像比較](verification/2026-10-25-classification-real-images.md)は、一回の科学的比較を完了しました。花5クラスの固定 backbone と head 学習では browser / native とも train 30/30、evaluation 15/20、macro F1 0.7504761905で、完全 ONNX の fresh browser / Python 比較は各50/50画像が条件内です。**元 controller は比較保存後の任意メタデータ GET `/open-vision-builder/build-info.json` の扱いで ERROR 終了しており、科学的比較の PASS と区別して保持します。** harness と推論しない事前確認を修正済みで、モデルの学習・推論は再実行していません。初回 CI の artifact hash 不一致と後続の確認範囲は [STATUS](STATUS.md)、最新 CI 判定は PR に記録します。
 
-分類の次の実装は、**ローカル保存・復元・バックアップと、対象環境の資源量・中断・再開**です。限定した品質結果を根拠に、P1 の資源・継続性確認と P2 の分類プロジェクト保存を小さい単位で進めます。P1 全体の完了、G4 全体、一般の JPEG decode、WebGPU、検出、製品リリースを認定したものではありません。検出の追加診断をこの次作業へ自動的に含めません。
+PR #9で分類の手動ZIPバックアップ・復元、PR #10でIndexedDBの作業自動保存と競合/破損検査を順に追加しています。続く実装対象は、**対象環境での容量・ピークメモリ・中断復旧の測定、必要性に応じたOPFS移行、学習途中のチェックポイント/再開**です。限定した品質結果を根拠に、P1 の資源・継続性確認と P2 の分類プロジェクト保存を小さい単位で進めます。P1 全体の完了、G4 全体、一般の JPEG decode、WebGPU、検出、製品リリースを認定したものではありません。検出の追加診断をこの次作業へ自動的に含めません。
 
 最初は MobileNetV4 Conv Small と D-FINE Nano を使って経路を検証し、品質を重視した Medium / Small の候補へ進めます。候補の変更はモデル名だけで判断せず、[MODELS](MODELS.md) の条件と [VERIFICATION](VERIFICATION.md) の結果に基づけます。
 
