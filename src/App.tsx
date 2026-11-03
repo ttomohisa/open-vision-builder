@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Sample, Split, WorkerRequest, WorkerResponse } from './protocol';
+import { checkRestoredImageDimensions, exportClassificationProject, importClassificationProject, MAX_PROJECT_ARCHIVE_BYTES } from './project-backup';
 
 const MAX_IMAGES = 64;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -66,8 +67,11 @@ export default function App() {
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [backupError, setBackupError] = useState('');
+  const [backupNotice, setBackupNotice] = useState('');
   const [buildInfo, setBuildInfo] = useState<BuildInfo | null>(null);
   const workerRef = useRef<Worker | null>(null);
+  const projectInputRef = useRef<HTMLInputElement | null>(null);
   const jobIdRef = useRef(0);
   const samplesRef = useRef<PreviewSample[]>([]);
   const urlsRef = useRef(new Set<string>());
@@ -286,6 +290,62 @@ export default function App() {
     }
   }
 
+  async function downloadProject() {
+    if (disabled) return;
+    setPreparing(true);
+    setBackupError('');
+    setBackupNotice('');
+    try {
+      const archive = await exportClassificationProject({
+        labels: trimmedLabels, samples: samplesRef.current, epochs: epochCount,
+        learningRate: rate, syntheticIds: samplesRef.current.filter(s => s.synthetic).map(s => s.id),
+      });
+      if (!mountedRef.current) return;
+      const url = URL.createObjectURL(new Blob([new Uint8Array(archive)], { type: 'application/zip' }));
+      urlsRef.current.add(url);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'open-vision-project.zip';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => {
+        URL.revokeObjectURL(url);
+        urlsRef.current.delete(url);
+      }, 10_000);
+      setBackupNotice('プロジェクトZIPを保存しました。バックアップは端末側で保管してください。');
+    } catch (caught) {
+      if (mountedRef.current) setBackupError(caught instanceof Error ? caught.message : 'プロジェクトを保存できませんでした。');
+    } finally {
+      if (mountedRef.current) setPreparing(false);
+    }
+  }
+
+  async function restoreProject(file?: File) {
+    if (!file || disabled) return;
+    setPreparing(true);
+    setBackupError('');
+    setBackupNotice('');
+    try {
+      if (file.size > MAX_PROJECT_ARCHIVE_BYTES) throw new Error('バックアップZIPの上限は512MiBです。');
+      const project = await importClassificationProject(new Uint8Array(await file.arrayBuffer()));
+      await checkRestoredImageDimensions(project);
+      if (!mountedRef.current) return;
+      if (!window.confirm('現在のクラス・画像・学習結果を、このバックアップで置き換えますか？')) return;
+      invalidate();
+      setLabels(project.labels);
+      setEpochs(String(project.epochs));
+      setLearningRate(String(project.learningRate));
+      const synthetic = new Set(project.syntheticIds);
+      updateSamples(project.samples.map(sample => previewSample(sample, synthetic.has(sample.id))));
+      setBackupNotice('プロジェクトを復元しました。学習結果はバックアップに含まれないため、必要なら再学習してください。');
+    } catch (caught) {
+      if (mountedRef.current) setBackupError(caught instanceof Error ? caught.message : 'プロジェクトを復元できませんでした。');
+    } finally {
+      if (mountedRef.current) setPreparing(false);
+    }
+  }
+
   function downloadModel() {
     if (!result) return;
     const url = URL.createObjectURL(new Blob([result.archive], { type: 'application/zip' }));
@@ -321,11 +381,23 @@ export default function App() {
           <li className={busy ? 'is-current' : result ? 'is-complete' : ''}><a href="#training"><span>02</span><div><strong>ブラウザで学習</strong><small>分類部分の重みを更新</small></div></a></li>
           <li className={result ? 'is-current' : ''}><a href="#result"><span>03</span><div><strong>モデルを持ち出す</strong><small>検証済みのONNXを保存</small></div></a></li>
         </ol>
-        <div className="local-note"><Icon kind="shield" /><p><strong>画像はこの端末で処理します。</strong> アップロードは行いません。この検証版ではデータを自動保存しません。</p></div>
+        <div className="local-note"><Icon kind="shield" /><p><strong>画像はこの端末で処理します。</strong> アップロードは行いません。この検証版ではデータを自動保存しません。プロジェクトZIPを手動で保管してください。</p></div>
 
         <section className="panel dataset-panel" id="dataset" aria-labelledby="dataset-heading">
           <div className="section-heading"><div className="section-title"><span className="step-number">01</span><div><h2 id="dataset-heading">画像を準備する</h2><p>クラスごとに、学習用と評価用の画像を分けて追加します。</p></div></div><button type="button" className="button button-secondary sample-button" disabled={disabled} onClick={useSample}><Icon kind="image" />サンプルで試す</button></div>
           <div className="dataset-toolbar"><p>PNG・JPEG・WebP · 1枚20MiB / 16MPまで · 合計64枚まで</p><span className="count-pill">{samples.length} / 64 枚</span></div>
+          <div className="project-actions">
+            <button type="button" className="button button-secondary" disabled={disabled} onClick={() => void downloadProject()}><Icon kind="download" />プロジェクトをバックアップ</button>
+            <button type="button" className="button button-secondary" disabled={disabled} onClick={() => projectInputRef.current?.click()}>バックアップを復元</button>
+            <input ref={projectInputRef} type="file" hidden accept=".zip,application/zip" aria-label="プロジェクトZIPを選択" onChange={event => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = '';
+              void restoreProject(file);
+            }} />
+            <span>画像・ラベル・設定を保存 · ZIP上限512MiB · 学習途中の重みは含みません</span>
+          </div>
+          {backupNotice && <p className="status-notice" role="status">{backupNotice}</p>}
+          {backupError && <p className="inline-error" role="alert">{backupError}</p>}
           {labelError && <p className="inline-error" role="alert">{labelError}</p>}
           <div className="class-grid">
             {labels.map((label, classIndex) => (
@@ -375,7 +447,7 @@ export default function App() {
           </section>
         </div>
       </main>
-      <footer className="site-footer"><span>Open Vision Builder <span className="footer-separator">/</span> Classification preview <span className="footer-separator">/</span> <a href={`${import.meta.env.BASE_URL}runtime/THIRD_PARTY_LICENSES.txt`} target="_blank" rel="noopener">ライセンス表示</a></span><span>データはこのタブを閉じると失われます。{(buildInfo?.commit || buildInfo?.sha) && <code>commit {(buildInfo.commit || buildInfo.sha)!.slice(0, 8)}</code>}{buildInfo?.pr && <span className="build-pr">PR #{buildInfo.pr}</span>}</span></footer>
+      <footer className="site-footer"><span>Open Vision Builder <span className="footer-separator">/</span> Classification preview <span className="footer-separator">/</span> <a href={`${import.meta.env.BASE_URL}runtime/THIRD_PARTY_LICENSES.txt`} target="_blank" rel="noopener">ライセンス表示</a></span><span>データは自動保存されません。作業を残すにはプロジェクトZIPを保存してください。{(buildInfo?.commit || buildInfo?.sha) && <code>commit {(buildInfo.commit || buildInfo.sha)!.slice(0, 8)}</code>}{buildInfo?.pr && <span className="build-pr">PR #{buildInfo.pr}</span>}</span></footer>
     </div>
   );
 }
