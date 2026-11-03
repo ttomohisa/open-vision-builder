@@ -36,3 +36,7 @@ E. Measure memory/storage and cancellation separately; propose training checkpoi
 ## Non-goals
 
 No server sync, no detector persistence, no WebGPU claims, no re-run of PR #7's one-shot real-image experiment, no relaxation of detector gates. Each implementation slice needs its own tested PR. User merges manually.
+
+## PR #9 implementation checkpoint (2026-11-03)
+
+The explicit ZIP-only slice now has source in `src/project-backup.ts`, UI integration in `src/App.tsx`, and unit/browser tests `tests/project-backup.test.ts` and `tests/project-backup.browser.spec.ts`. ZIP validation scans the central directory and verifies checksums before UI state mutation. Backup ZIP is not an ONNX model kit; no learned weights are saved. The current hard ZIP cap is 512 MiB to bound decompression and memory risk, even though the separate per-image limits could sum to more. **CI status and any failing checks must be captured before making this PR mergeable.** Follow-on IndexedDB/OPFS autosave and optimizer checkpointing remain outside this slice.
