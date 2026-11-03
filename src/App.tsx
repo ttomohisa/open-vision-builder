@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Sample, Split, WorkerRequest, WorkerResponse } from './protocol';
 import { checkRestoredImageDimensions, exportClassificationProject, importClassificationProject, MAX_PROJECT_ARCHIVE_BYTES } from './project-backup';
+import { DraftConflictError, describeStorage, loadWorkingDraft, requestPersistentStorage, saveWorkingDraft } from './local-draft';
+import type { WorkingDraft } from './local-draft';
 
 const MAX_IMAGES = 64;
 const MAX_FILE_BYTES = 20 * 1024 * 1024;
@@ -70,6 +72,13 @@ export default function App() {
   const [backupError, setBackupError] = useState('');
   const [backupNotice, setBackupNotice] = useState('');
   const [buildInfo, setBuildInfo] = useState<BuildInfo | null>(null);
+  const [storageReady, setStorageReady] = useState(false);
+  const [storageBlocked, setStorageBlocked] = useState(false);
+  const [storageMessage, setStorageMessage] = useState('ブラウザ内の保存を確認しています…');
+  const [storageInfo, setStorageInfo] = useState<{ used: number | null; quota: number | null; persisted: boolean | null } | null>(null);
+  const draftRevisionRef = useRef<number | null>(null);
+  const draftSaveTicketRef = useRef(0);
+  const draftSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const workerRef = useRef<Worker | null>(null);
   const projectInputRef = useRef<HTMLInputElement | null>(null);
   const jobIdRef = useRef(0);
@@ -103,7 +112,75 @@ export default function App() {
     };
   }, []);
 
-  const disabled = busy || preparing;
+  useEffect(() => {
+    let stopped = false;
+    void (async () => {
+      try {
+        const saved = await loadWorkingDraft();
+        if (stopped || !mountedRef.current) return;
+        if (saved) {
+          draftRevisionRef.current = saved.revision;
+          setLabels(saved.draft.labels);
+          setEpochs(saved.draft.epochs);
+          setLearningRate(saved.draft.learningRate);
+          const synthetic = new Set(saved.draft.syntheticIds);
+          updateSamples(saved.draft.samples.map(sample => previewSample(sample, synthetic.has(sample.id))));
+          setStorageMessage('このブラウザに保存した前回の作業を復元しました。');
+        } else {
+          setStorageMessage('このブラウザへの自動保存を開始します。');
+        }
+        const info = await describeStorage();
+        if (!stopped && mountedRef.current) setStorageInfo(info);
+      } catch (caught) {
+        if (!stopped && mountedRef.current) {
+          setStorageBlocked(true);
+          setStorageMessage(caught instanceof Error ? caught.message : '保存内容を確認できません。ZIPバックアップを利用してください。');
+        }
+      } finally {
+        if (!stopped && mountedRef.current) setStorageReady(true);
+      }
+    })();
+    return () => { stopped = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!storageReady || storageBlocked || busy || preparing) return;
+    const ticket = ++draftSaveTicketRef.current;
+    setStorageMessage('変更内容の自動保存を準備しています…');
+    const timer = window.setTimeout(() => {
+      const draft: WorkingDraft = {
+        labels: [...labels], epochs, learningRate,
+        samples: samples.map(({ id, name, label, split, file }) => ({ id, name, label, split, file })),
+        syntheticIds: samples.filter(sample => sample.synthetic).map(sample => sample.id),
+      };
+      draftSaveQueueRef.current = draftSaveQueueRef.current.catch(() => {}).then(async () => {
+        if (ticket !== draftSaveTicketRef.current || !mountedRef.current) return;
+        setStorageMessage('ブラウザに保存しています…');
+        try {
+          const saved = await saveWorkingDraft(draft, draftRevisionRef.current);
+          draftRevisionRef.current = saved.revision;
+          if (ticket === draftSaveTicketRef.current && mountedRef.current) {
+            setStorageMessage('このブラウザに保存済みです。ZIPバックアップも定期的に保存してください。');
+            setStorageInfo(await describeStorage());
+          }
+        } catch (caught) {
+          if (!mountedRef.current) return;
+          if (caught instanceof DraftConflictError) setStorageBlocked(true);
+          if (ticket === draftSaveTicketRef.current) {
+            const message = caught instanceof Error ? caught.message : '自動保存できませんでした。';
+            setStorageMessage(
+              caught instanceof DOMException && caught.name === 'QuotaExceededError'
+                ? 'ブラウザの容量が不足しています。変更を保存できませんでした。プロジェクトZIPをバックアップしてください。'
+                : message,
+            );
+          }
+        }
+      });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [storageReady, storageBlocked, busy, preparing, labels, samples, epochs, learningRate]);
+
+  const disabled = busy || preparing || !storageReady;
   const trimmedLabels = labels.map(label => label.trim().normalize('NFC'));
   const labelError = trimmedLabels.some(label => !label)
     ? 'すべてのクラスに名前を付けてください。空白だけの名前は使えません。'
@@ -332,6 +409,8 @@ export default function App() {
       await checkRestoredImageDimensions(project);
       if (!mountedRef.current) return;
       if (!window.confirm('現在のクラス・画像・学習結果を、このバックアップで置き換えますか？')) return;
+      // A previous autosave must finish before the imported draft becomes current.
+      await draftSaveQueueRef.current;
       invalidate();
       setLabels(project.labels);
       setEpochs(String(project.epochs));
@@ -381,7 +460,7 @@ export default function App() {
           <li className={busy ? 'is-current' : result ? 'is-complete' : ''}><a href="#training"><span>02</span><div><strong>ブラウザで学習</strong><small>分類部分の重みを更新</small></div></a></li>
           <li className={result ? 'is-current' : ''}><a href="#result"><span>03</span><div><strong>モデルを持ち出す</strong><small>検証済みのONNXを保存</small></div></a></li>
         </ol>
-        <div className="local-note"><Icon kind="shield" /><p><strong>画像はこの端末で処理します。</strong> アップロードは行いません。この検証版ではデータを自動保存しません。プロジェクトZIPを手動で保管してください。</p></div>
+        <div className="local-note"><Icon kind="shield" /><p><strong>画像はこの端末で処理します。</strong> アップロードは行いません。作業内容はブラウザに自動保存します。端末・ブラウザのデータ削除に備え、プロジェクトZIPも保存してください。</p></div>
 
         <section className="panel dataset-panel" id="dataset" aria-labelledby="dataset-heading">
           <div className="section-heading"><div className="section-title"><span className="step-number">01</span><div><h2 id="dataset-heading">画像を準備する</h2><p>クラスごとに、学習用と評価用の画像を分けて追加します。</p></div></div><button type="button" className="button button-secondary sample-button" disabled={disabled} onClick={useSample}><Icon kind="image" />サンプルで試す</button></div>
@@ -396,7 +475,20 @@ export default function App() {
             }} />
             <span>画像・ラベル・設定を保存 · ZIP上限512MiB · 学習途中の重みは含みません</span>
           </div>
-          {backupNotice && <p className="status-notice" role="status">{backupNotice}</p>}
+          <div className="local-storage-status" aria-live="polite">
+            <p role="status">{storageMessage}</p>
+            {storageInfo && <p className="storage-usage">推定使用量 {storageInfo.used === null ? '不明' : (storageInfo.used / 1024 / 1024).toFixed(1) + ' MiB'} / 保存可能容量 {storageInfo.quota === null ? '不明' : (storageInfo.quota / 1024 / 1024).toFixed(0) + ' MiB'} · 保存保護 {storageInfo.persisted === true ? '有効' : storageInfo.persisted === false ? '未許可' : '不明'}</p>}
+            {storageReady && storageInfo?.persisted !== true && <button type="button" className="text-button" onClick={() => { void (async () => {
+              try {
+                const allowed = await requestPersistentStorage();
+                setStorageInfo(await describeStorage());
+                setStorageMessage(allowed ? '保存保護を許可しました。ブラウザのデータ削除には注意してください。' : '保存保護が許可されませんでした。ZIPバックアップも保存してください。');
+              } catch {
+                setStorageMessage('保存保護を設定できません。ZIPバックアップを保存してください。');
+              }
+            })(); }}>保存保護をリクエスト</button>}
+          </div>
+          {backupNotice && <p className="status-notice" role="status">{backupNotice}</p>
           {backupError && <p className="inline-error" role="alert">{backupError}</p>}
           {labelError && <p className="inline-error" role="alert">{labelError}</p>}
           <div className="class-grid">
@@ -447,7 +539,7 @@ export default function App() {
           </section>
         </div>
       </main>
-      <footer className="site-footer"><span>Open Vision Builder <span className="footer-separator">/</span> Classification preview <span className="footer-separator">/</span> <a href={`${import.meta.env.BASE_URL}runtime/THIRD_PARTY_LICENSES.txt`} target="_blank" rel="noopener">ライセンス表示</a></span><span>データは自動保存されません。作業を残すにはプロジェクトZIPを保存してください。{(buildInfo?.commit || buildInfo?.sha) && <code>commit {(buildInfo.commit || buildInfo.sha)!.slice(0, 8)}</code>}{buildInfo?.pr && <span className="build-pr">PR #{buildInfo.pr}</span>}</span></footer>
+      <footer className="site-footer"><span>Open Vision Builder <span className="footer-separator">/</span> Classification preview <span className="footer-separator">/</span> <a href={`${import.meta.env.BASE_URL}runtime/THIRD_PARTY_LICENSES.txt`} target="_blank" rel="noopener">ライセンス表示</a></span><span>作業はこのブラウザへ自動保存します。ZIPバックアップは別途保管してください。{(buildInfo?.commit || buildInfo?.sha) && <code>commit {(buildInfo.commit || buildInfo.sha)!.slice(0, 8)}</code>}{buildInfo?.pr && <span className="build-pr">PR #{buildInfo.pr}</span>}</span></footer>
     </div>
   );
 }
