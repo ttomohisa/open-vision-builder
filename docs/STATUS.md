@@ -20,11 +20,17 @@ PR #5 の初回コミットは文書のみでした。その後、[矩形1画像
 
 ユーザーの指示に基づく[方針点検](decisions/0005-bound-numerical-investigation.md)で、数値調査の自動延長を止めました。PR #5 は現在の再現・局所診断で区切り、予定していた decoder 全体 replay は保留します。次は学習・出力への影響を優先し、分類の実データ品質確認も独立して進める方針です。今回の点検で新しい学習・精度実験を実行したものではありません。
 
+## PR #10: IndexedDBによる分類作業の自動保存（レビュー中）
+
+[PR #10](https://github.com/ttomohisa/open-vision-builder/pull/10) は、PR #9のZIPとは別に、元画像・クラス・train/test分割・学習設定の**ブラウザ内自動保存**を追加しています。IndexedDBの単一レコードをstrict durability hint付きreadwrite transactionで丸ごと置換し、commit前の失敗では最後の成功版を維持します。保存前の入力は数値やクラス名の編集途中でも記録でき、復元前にSHA-256と画像デコード/画素数を再確認します。別タブの古い版が新しい版を上書きしないようrevisionで競合検出します。
+
+[実装計画と検証条件](superpowers/plans/2026-11-03-local-autosave.md)を参照。**コードの実装とCIでの検証は別**。CI結果が確認できるまで、リリース/全条件合格としません。今回の対象はIndexedDBで、**OPFS連携・実機メモリ/容量上限測定・学習中断後のoptimizer再開は未実装**。自動保存はZIPの代わりになりません。D-FINE G1 FAILと分類実画像の元controller ERRORは維持します。
+
 ## PR #9: 分類プロジェクトZIPの手動バックアップと復元
 
 2026-11-03、PR #7 のマージを確認後、[PR #9](https://github.com/ttomohisa/open-vision-builder/pull/9) の設計だけだったDraftに、分類の元画像・クラス・分割・学習設定を含むプロジェクトZIP export/importを実装しました。ZIPスキーマv1、SHA-256、展開前の中央目録検査と512MiB上限、画像の実デコード・16MP検査、確認ダイアログと失敗時の非破壊性を対象とします。分類の学習済みONNX出力とプロジェクトZIPは独立しており、プロジェクトZIPは学習済み重み・optimizer・途中チェックポイントを保存しません。
 
-純粋なシリアライズの単体テスト、実ブラウザでの保存・復元と破損ZIP拒否のE2Eを追加しています。**最新コミットのCIの結果はPRで確認すること。** PRのレビューと合格をもってこの範囲の完了を判断します。IndexedDB/OPFSによる自動保存、タブ終了をまたぐ学習途中の再開、メモリ/ストレージの実機測定、検出の保存は未実装です。既存のD-FINE G1 FAILおよび実画像比較のcontroller ERRORを変更しません。
+純粋なシリアライズの単体テスト、実ブラウザでの保存・復元と破損ZIP拒否のE2Eを追加しています。**最新コミットのCIの結果はPRで確認すること。** PRのレビューと合格をもってこの範囲の完了を判断します。PR #10でIndexedDBの自動保存を別途実装中です。OPFS連携、タブ終了をまたぐ学習途中の再開、メモリ/ストレージの実機測定、検出の保存は未実装です。既存のD-FINE G1 FAILおよび実画像比較のcontroller ERRORを変更しません。
 
 ## 実装・検証の状態
 
@@ -65,7 +71,7 @@ canonical PNG・花5クラス・Small の固定 backbone とヘッド学習・�
 | 検出の未解決 | **G1: 中間特徴量の一致は FAIL**。全3入力の元 PyTorch / ORT 比較を保存。最初の Conv の FP32 差と後段での増幅を確認したが、全演算の同等性を証明したものではない。検出 UI・独自クラス・完全 fine-tuning・精度は未実装/未検証 |
 | 実データ品質 | 分類の花5クラスは browser/native とも評価15/20、macro F1 0.7504761905で限定条件内。controller ERROR は保持し、G4全体・一般化品質を認定しない。検出は事前の学習改善条件未達。Mediumは未検証 |
 | 環境 | Linux x86_64 / Headless Chrome 156.0.8078.4 / WASM、非隔離サブパス。一般 PC、Edge、WebGPU、edge 端末は未認定 |
-| 資源と継続性 | 経路の経過時間をレポート。ピークメモリ未測定。中断・古い結果の無効化は検証済み。保存・再開・バックアップは未実装 |
+| 資源と継続性 | 経路の経過時間をレポート。ピークメモリ未測定。中断・古い結果の無効化は検証済み。PR #9に分類ZIPバックアップ、PR #10にIndexedDB作業自動保存を実装中。optimizerの再開・OPFS連携は未実装 |
 | データ非送信 | 既存の公開生成データ試験に加え、花写真試験でも記録した要求は同一 origin の GET。strict controller は任意 build-info GET 一件で ERROR を保持。運営 API / DB なし |
 | GitHub Pages | PR #3 の実サイトで分類学習・ZIP・Python 一致を検証済み。新しい公開は commit と Actions を再確認。検出の未認定モデルは Pages に含めない |
 | Cloudflare | 静的 dist と base 指定手順を用意。Cloudflare への実デプロイは未実施 |
