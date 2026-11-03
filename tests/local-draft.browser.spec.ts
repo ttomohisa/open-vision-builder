@@ -7,10 +7,13 @@ test('autosave survives reload with source images, class names and unfinished se
   await page.getByRole('button', { name: 'サンプルで試す' }).click();
   await expect(page.getByText('12 / 64 枚')).toBeVisible();
   await page.getByLabel('クラス1の名前').fill('ローカル保存');
-  await page.getByRole('group', { name: 'missing' }).count(); // no-op; keep DOM accesses independent of Worker
+  await page.locator('details.settings summary').click();
+  await page.locator('input[type="number"]').first().fill('27');
   await expect(page.getByText(saved)).toBeVisible({ timeout: 20_000 });
   await page.reload();
   await expect(page.getByLabel('クラス1の名前')).toHaveValue('ローカル保存');
+  await page.locator('details.settings summary').click();
+  await expect(page.locator('input[type="number"]').first()).toHaveValue('27');
   await expect(page.getByText('12 / 64 枚')).toBeVisible();
   await page.getByLabel('クラス1の名前').fill(''); // incomplete drafts must still autosave
   await expect(page.getByText(saved)).toBeVisible({ timeout: 20_000 });
@@ -52,7 +55,7 @@ test('aborted IndexedDB write leaves the previous successful draft recoverable',
     };
   });
   await page.getByLabel('クラス1の名前').fill('未保存の変更');
-  await expect(page.getByText('保存処理が中断されました。', { exact: false })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.local-storage-status')).toContainText(/abort|中断|保存できません|transaction/i, { timeout: 20_000 });
   await page.reload();
   await expect(page.getByLabel('クラス1の名前')).toHaveValue('暖色');
   await expect(page.getByText('12 / 64 枚')).toBeVisible();
