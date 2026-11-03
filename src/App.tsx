@@ -53,6 +53,20 @@ function syntheticImage(label: number, index: number): Promise<Blob> {
   }, 'image/png'));
 }
 
+function sameDraft(a: WorkingDraft | null, b: WorkingDraft): boolean {
+  if (!a) return false;
+  return a.epochs === b.epochs && a.learningRate === b.learningRate
+    && a.labels.length === b.labels.length && a.labels.every((name, i) => name === b.labels[i])
+    && a.syntheticIds.length === b.syntheticIds.length
+    && a.syntheticIds.every((id, i) => id === b.syntheticIds[i])
+    && a.samples.length === b.samples.length
+    && a.samples.every((item, i) => {
+      const other = b.samples[i];
+      return item.id === other.id && item.name === other.name && item.label === other.label
+        && item.split === other.split && item.file === other.file;
+    });
+}
+
 function formatDuration(ms: number) {
   const seconds = ms / 1000;
   return seconds < 60 ? `${seconds.toFixed(1)}秒` : `${Math.floor(seconds / 60)}分${Math.round(seconds % 60)}秒`;
@@ -77,6 +91,7 @@ export default function App() {
   const [storageMessage, setStorageMessage] = useState('ブラウザ内の保存を確認しています…');
   const [storageInfo, setStorageInfo] = useState<{ used: number | null; quota: number | null; persisted: boolean | null } | null>(null);
   const draftRevisionRef = useRef<number | null>(null);
+  const lastSavedDraftRef = useRef<WorkingDraft | null>(null);
   const draftSaveTicketRef = useRef(0);
   const draftSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const workerRef = useRef<Worker | null>(null);
@@ -120,6 +135,7 @@ export default function App() {
         if (stopped || !mountedRef.current) return;
         if (saved) {
           draftRevisionRef.current = saved.revision;
+          lastSavedDraftRef.current = saved.draft;
           setLabels(saved.draft.labels);
           setEpochs(saved.draft.epochs);
           setLearningRate(saved.draft.learningRate);
@@ -144,21 +160,26 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!storageReady || storageBlocked || busy || preparing) return;
+    // Invalidate queued work even when training/import temporarily suspends saving.
     const ticket = ++draftSaveTicketRef.current;
+    if (!storageReady || storageBlocked || busy || preparing) return;
+    const draft: WorkingDraft = {
+      labels: [...labels], epochs, learningRate,
+      samples: samples.map(({ id, name, label, split, file }) => ({ id, name, label, split, file })),
+      syntheticIds: samples.filter(sample => sample.synthetic).map(sample => sample.id),
+    };
+    // Reading a saved project, downloading a ZIP, or finishing a training job
+    // must not bump the database revision when the dataset did not change.
+    if (sameDraft(lastSavedDraftRef.current, draft)) return;
     setStorageMessage('変更内容の自動保存を準備しています…');
     const timer = window.setTimeout(() => {
-      const draft: WorkingDraft = {
-        labels: [...labels], epochs, learningRate,
-        samples: samples.map(({ id, name, label, split, file }) => ({ id, name, label, split, file })),
-        syntheticIds: samples.filter(sample => sample.synthetic).map(sample => sample.id),
-      };
       draftSaveQueueRef.current = draftSaveQueueRef.current.catch(() => {}).then(async () => {
         if (ticket !== draftSaveTicketRef.current || !mountedRef.current) return;
         setStorageMessage('ブラウザに保存しています…');
         try {
           const saved = await saveWorkingDraft(draft, draftRevisionRef.current);
           draftRevisionRef.current = saved.revision;
+          lastSavedDraftRef.current = draft;
           if (ticket === draftSaveTicketRef.current && mountedRef.current) {
             setStorageMessage('このブラウザに保存済みです。ZIPバックアップも定期的に保存してください。');
             setStorageInfo(await describeStorage());
