@@ -509,7 +509,7 @@ export default function App() {
               }
             })(); }}>保存保護をリクエスト</button>}
           </div>
-          {backupNotice && <p className="status-notice" role="status">{backupNotice}</p>
+          {backupNotice && <p className="status-notice" role="status">{backupNotice}</p>}
           {backupError && <p className="inline-error" role="alert">{backupError}</p>}
           {labelError && <p className="inline-error" role="alert">{labelError}</p>}
           <div className="class-grid">
