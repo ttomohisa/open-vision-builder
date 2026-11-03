@@ -177,12 +177,17 @@ export async function loadWorkingDraft(): Promise<LoadedDraft | null> {
 async function serializeDraft(draft: WorkingDraft): Promise<Omit<RecordV1, 'revision' | 'savedAt'>> {
   assertDraft(draft);
   const synthetic = new Set(draft.syntheticIds);
-  const images: SavedSample[] = await Promise.all(draft.samples.map(async sample => ({
-    id: sample.id, name: sample.name, label: sample.label,
-    split: sample.split, synthetic: synthetic.has(sample.id),
-    type: sample.file.type, size: sample.file.size, file: sample.file,
-    sha256: await hash(sample.file),
-  })));
+  // Hash one image at a time. Reading 64 potentially large Blobs concurrently
+  // would create an unnecessary temporary memory spike on small PCs.
+  const images: SavedSample[] = [];
+  for (const sample of draft.samples) {
+    images.push({
+      id: sample.id, name: sample.name, label: sample.label,
+      split: sample.split, synthetic: synthetic.has(sample.id),
+      type: sample.file.type, size: sample.file.size, file: sample.file,
+      sha256: await hash(sample.file),
+    });
+  }
   return {
     schemaVersion: 1, labels: [...draft.labels],
     epochs: draft.epochs, learningRate: draft.learningRate, images,
