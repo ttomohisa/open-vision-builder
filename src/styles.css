@@ -289,3 +289,7 @@ progress::-moz-progress-bar { background: #13918d; border-radius: 8px; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; }
 }
+
+/* Explicit project backup is independent of the inference-model download. */
+.project-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 18px; }
+.project-actions > span { font-size: 11px; line-height: 1.7; color: var(--muted); flex-basis: 100%; }
