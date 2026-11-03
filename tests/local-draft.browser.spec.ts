@@ -2,6 +2,21 @@ import { test, expect } from '@playwright/test';
 
 const saved = 'このブラウザに保存済みです。ZIPバックアップも定期的に保存してください。';
 
+async function savedClassName(page: import('@playwright/test').Page): Promise<string | undefined> {
+  return page.evaluate(() => new Promise<string | undefined>((resolve, reject) => {
+    const request = indexedDB.open('open-vision-builder-classification-draft-v1', 1);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('drafts', 'readonly');
+      const data = tx.objectStore('drafts').get('current');
+      data.onsuccess = () => resolve(data.result?.labels?.[0]);
+      tx.oncomplete = () => db.close();
+      tx.onabort = () => { db.close(); reject(tx.error); };
+    };
+    request.onerror = () => reject(request.error);
+  }));
+}
+
 test('autosave survives reload with source images, class names and unfinished settings', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: 'サンプルで試す' }).click();
@@ -9,14 +24,14 @@ test('autosave survives reload with source images, class names and unfinished se
   await page.getByLabel('クラス1の名前').fill('ローカル保存');
   await page.locator('details.settings summary').click();
   await page.locator('input[type="number"]').first().fill('27');
-  await expect(page.getByText(saved)).toBeVisible({ timeout: 20_000 });
+  await expect.poll(() => savedClassName(page), { timeout: 20_000 }).toBe('ローカル保存');
   await page.reload();
   await expect(page.getByLabel('クラス1の名前')).toHaveValue('ローカル保存');
   await page.locator('details.settings summary').click();
   await expect(page.locator('input[type="number"]').first()).toHaveValue('27');
   await expect(page.getByText('12 / 64 枚')).toBeVisible();
   await page.getByLabel('クラス1の名前').fill(''); // incomplete drafts must still autosave
-  await expect(page.getByText(saved)).toBeVisible({ timeout: 20_000 });
+  await expect.poll(() => savedClassName(page), { timeout: 20_000 }).toBe('');
   await page.reload();
   await expect(page.getByLabel('クラス1の名前')).toHaveValue('');
   await expect(page.getByText('12 / 64 枚')).toBeVisible();
@@ -30,7 +45,7 @@ test('stale second tab cannot silently overwrite a newer local draft', async ({ 
   await second.goto('./');
   await expect(second.getByText('12 / 64 枚')).toBeVisible();
   await page.getByLabel('クラス1の名前').fill('先に更新したタブ');
-  await expect(page.getByText(saved)).toBeVisible({ timeout: 20_000 });
+  await expect.poll(() => savedClassName(page), { timeout: 20_000 }).toBe('先に更新したタブ');
   await second.getByLabel('クラス1の名前').fill('古いタブからの変更');
   await expect(second.getByText('別のタブで保存内容が更新されました。', { exact: false })).toBeVisible({ timeout: 20_000 });
   await second.reload();
